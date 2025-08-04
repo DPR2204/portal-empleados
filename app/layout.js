@@ -21,11 +21,11 @@ export default function RootLayout({ children }) {
 
             {/* Navegación */}
             <nav style={{ display: 'flex', gap: 16, fontSize: 14 }}>
-              <a href="/">Inicio</a>
-              <a href="/ordenes">Mis Órdenes</a>
-              <a href="/ordenes/nueva">Nueva Orden</a>
-              <a href="/colaboradores/nuevo">Nuevo colaborador</a>
-            </nav>
+  <a href="/">Inicio</a>
+  <a href="/ordenes">Mis Órdenes</a>
+  <a href="/ordenes/nueva">Nueva Orden</a>
+  <a href="/colaboradores/nuevo">Nuevo colaborador</a>
+</nav>
           </header>
 
           {/* ---------- Contenido de la página ---------- */}
