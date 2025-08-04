@@ -1,67 +1,141 @@
-// app/ordenes/page.js
 'use client';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
+import { useState } from 'react';
 
-export default function OrdenesPage() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function NuevaOrden() {
+  const [campos, setCampos] = useState({
+    idPublico: '',
+    frecuencia: 'MENSUAL',
+    anio: '',
+    mes: '',
+    quincena: 'Q1',
+    inicio: '',
+    fin: '',
+    dias_laborados: '',
+    otros_descuentos: '',
+  });
+  const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true); setErr('');
+  const cambia = (e) =>
+    setCampos({ ...campos, [e.target.name]: e.target.value });
 
-      // 1) Traer roles de usuario
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-      if (!user) return setErr('Sesión no encontrada');
+  const guardar = async (e) => {
+    e.preventDefault();
+    setMsg('');
+    setErr('');
+    // Ajusta tipos numéricos
+    const payload = {
+      ...campos,
+      anio: campos.anio ? +campos.anio : undefined,
+      mes: campos.mes ? +campos.mes : undefined,
+      dias_laborados: campos.dias_laborados ? +campos.dias_laborados : undefined,
+      otros_descuentos: campos.otros_descuentos ? +campos.otros_descuentos : undefined,
+    };
 
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('user_id', user.id).single();
-
-      const isAdmin = ['RH','FINANZAS','ADMIN'].includes(profile.role);
-
-      // 2) Consulta de órdenes
-      let query = supabase
-        .from('orden_pago')
-        .select('folio,periodo,frecuencia,neto,estado,verify_token')
-        .order('created_at',{ascending:false});
-
-      if (!isAdmin) {
-        // colaborador normal → solo sus órdenes
-        const { data: col } = await supabase
-          .from('colaborador').select('id').eq('email', user.email).single();
-        query = query.eq('colaborador_id', col.id);
-      }
-
-      const { data, error } = await query;
-      if (error) setErr(error.message);
-      else setRows(data || []);
-      setLoading(false);
+    const res = await fetch('/api/ordenes/generar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const j = await res.json();
+    if (!res.ok) {
+      setErr(j.error || 'Error al generar');
+    } else {
+      setMsg(`✔ Orden emitida: ${j.folio}`);
     }
-    load();
-  }, []);
-
-  if (loading) return <main><p>Cargando…</p></main>;
-  if (err)     return <main><p style={{color:'red'}}>Error: {err}</p></main>;
+  };
 
   return (
     <main>
-      <h2>Órdenes</h2>
-      {rows.length === 0
-        ? <p>No hay órdenes.</p>
-        : (
-          <table style={{ borderCollapse:'collapse', width:'100%', maxWidth:800 }}>
-            <thead>…</thead>
-            <tbody>
-              {rows.map(r=>(
-                <tr key={r.verify_token}>…</tr>
-              ))}
-            </tbody>
-          </table>
+      <h2>Nueva Orden de Pago</h2>
+      <form onSubmit={guardar} style={{ display: 'grid', gap: 12, maxWidth: 400 }}>
+        {/* Ahora pedimos el ID público */}
+        <input
+          name="idPublico"
+          placeholder="ID Público del colaborador"
+          value={campos.idPublico}
+          onChange={cambia}
+          required
+        />
+
+        <select name="frecuencia" value={campos.frecuencia} onChange={cambia}>
+          <option value="MENSUAL">Mensual</option>
+          <option value="QUINCENAL">Quincenal</option>
+          <option value="DIAS">Por días</option>
+        </select>
+
+        {campos.frecuencia !== 'DIAS' && (
+          <>
+            <input
+              name="anio"
+              type="number"
+              placeholder="Año"
+              value={campos.anio}
+              onChange={cambia}
+              required
+            />
+            <input
+              name="mes"
+              type="number"
+              placeholder="Mes (1–12)"
+              value={campos.mes}
+              onChange={cambia}
+              required
+            />
+            {campos.frecuencia === 'QUINCENAL' && (
+              <select
+                name="quincena"
+                value={campos.quincena}
+                onChange={cambia}
+              >
+                <option value="Q1">Q1 (días 1–15)</option>
+                <option value="Q2">Q2 (días 16–fin)</option>
+              </select>
+            )}
+          </>
         )}
+
+        {campos.frecuencia === 'DIAS' && (
+          <>
+            <input
+              name="inicio"
+              type="date"
+              value={campos.inicio}
+              onChange={cambia}
+              required
+            />
+            <input
+              name="fin"
+              type="date"
+              value={campos.fin}
+              onChange={cambia}
+              required
+            />
+            <input
+              name="dias_laborados"
+              type="number"
+              placeholder="Días laborados"
+              value={campos.dias_laborados}
+              onChange={cambia}
+              required
+            />
+          </>
+        )}
+
+        <input
+          name="otros_descuentos"
+          type="number"
+          step="0.01"
+          placeholder="Otros descuentos (opcional)"
+          value={campos.otros_descuentos}
+          onChange={cambia}
+        />
+
+        <button type="submit">Generar</button>
+      </form>
+
+      {err && <p style={{ color: 'red' }}>{err}</p>}
+      {msg && <p style={{ color: 'green' }}>{msg}</p>}
     </main>
   );
 }
