@@ -1,34 +1,41 @@
-// app/verify/page.js
 'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function VerifyByFolioPage() {
+export default function VerifyIndexPage() {
   const [folio, setFolio] = useState('')
+  const [error, setError] = useState('')
   const router = useRouter()
 
-  const onSubmit = e => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (folio.trim()) {
-      // Navega a /verify/folio/{folio}
-      router.push(`/verify/folio/${encodeURIComponent(folio.trim())}`)
+    setError('')
+    // Llamamos a nuestro nuevo endpoint para buscar el token por folio
+    const res = await fetch(`/api/ordenes/folio/${encodeURIComponent(folio)}`)
+    if (!res.ok) {
+      setError('Folio no encontrado')
+      return
     }
+    const { verify_token } = await res.json()
+    // Redirigimos a la página de verificación por token
+    router.push(`/verify/${verify_token}`)
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto' }}>
+    <main>
       <h2>Verificar Orden por Folio</h2>
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 8 }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8 }}>
         <input
           type="text"
-          placeholder="Introduce el folio (ej. 2025-09-M-7481)"
+          placeholder="Escribe el folio completo"
           value={folio}
-          onChange={e => setFolio(e.target.value)}
-          required
+          onChange={(e) => setFolio(e.target.value)}
+          style={{ flex: 1 }}
         />
         <button type="submit">Buscar</button>
       </form>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
     </main>
   )
 }
