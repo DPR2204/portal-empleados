@@ -1,35 +1,46 @@
-// app/layout.js
-export const metadata = {
-  title: 'Portal de Empleados',
-  description: 'MVP Portal Empleados - Órdenes de Pago',
-};
+// app/verify/page.js
+'use client';
 
-export default function RootLayout({ children }) {
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function VerifyIndexPage() {
+  const [folio, setFolio] = useState('');
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    const normalized = folio.trim().toUpperCase();
+    if (!normalized) {
+      setError('Por favor ingresa un folio.');
+      return;
+    }
+
+    const res = await fetch(`/api/ordenes/folio/${encodeURIComponent(normalized)}`);
+    if (!res.ok) {
+      setError('Folio no encontrado');
+      return;
+    }
+    const { verify_token } = await res.json();
+    router.push(`/verify/${verify_token}`);
+  };
+
   return (
-    <html lang="es">
-      <body style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Ubuntu' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: 16 }}>
-          <header style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 24,
-          }}>
-            <h1 style={{ fontSize: 20 }}>Portal de Empleados</h1>
-            <nav style={{ display: 'flex', gap: 16, fontSize: 14 }}>
-              <a href="/">Inicio</a>
-              <a href="/ordenes">Mis Órdenes</a>
-              <a href="/ordenes/nueva">Nueva Orden</a>
-              <a href="/colaboradores/nuevo">Nuevo Colaborador</a>
-              <a href="/verify">Verificar Folio</a>
-            </nav>
-          </header>
-          {children}
-          <footer style={{ marginTop: 40, fontSize: 12, color: '#666' }}>
-            © {new Date().getFullYear()} Portal Empleados
-          </footer>
-        </div>
-      </body>
-    </html>
+    <main style={{ maxWidth: 480, margin: '0 auto' }}>
+      <h2>Verificar Orden por Folio</h2>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder="Ej. CO-83AEE-2026-02-M-7023"
+          value={folio}
+          onChange={e => setFolio(e.target.value)}
+          style={{ flex: 1 }}
+        />
+        <button type="submit">Buscar</button>
+      </form>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </main>
   );
 }
