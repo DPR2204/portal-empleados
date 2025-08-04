@@ -20,11 +20,11 @@ export default function RootLayout({ children }) {
             <h1 style={{ fontSize: 20 }}>Portal de Empleados</h1>
 
             {/* Navegación */}
-            <nav style={{ display: 'flex', gap: 16, fontSize: 14 }}>
+            <nav style={{ display: 'flex', gap: 16 }}>
   <a href="/">Inicio</a>
   <a href="/ordenes">Mis Órdenes</a>
   <a href="/ordenes/nueva">Nueva Orden</a>
-  <a href="/colaboradores/nuevo">Nuevo colaborador</a>
+  <a href="/colaboradores/nuevo">Nuevo Colaborador</a>
 </nav>
           </header>
 
