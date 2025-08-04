@@ -1,6 +1,4 @@
-// app/ordenes/nueva/page.js
 'use client';
-
 import { useState } from 'react';
 
 export default function NuevaOrden() {
@@ -15,7 +13,7 @@ export default function NuevaOrden() {
     dias_laborados: '',
     otros_descuentos: '',
   });
-  const [msg, setMsg] = useState('');
+  const [resultado, setResultado] = useState(null);
   const [err, setErr] = useState('');
 
   const cambia = (e) =>
@@ -23,54 +21,37 @@ export default function NuevaOrden() {
 
   const guardar = async (e) => {
     e.preventDefault();
-    setMsg('');
     setErr('');
+    setResultado(null);
 
-    // Ajustamos tipos numéricos
+    // Prepara payload
     const payload = {
       ...campos,
       anio: campos.anio ? +campos.anio : undefined,
       mes: campos.mes ? +campos.mes : undefined,
-      dias_laborados: campos.dias_laborados
-        ? +campos.dias_laborados
-        : undefined,
-      otros_descuentos: campos.otros_descuentos
-        ? +campos.otros_descuentos
-        : undefined,
+      dias_laborados: campos.dias_laborados ? +campos.dias_laborados : undefined,
+      otros_descuentos: campos.otros_descuentos ? +campos.otros_descuentos : undefined,
     };
-
-    // 1️⃣ Verificamos en consola que el submit ocurre y qué payload enviamos
-    console.log('🔥 [NuevaOrden] submit payload →', payload);
 
     const res = await fetch('/api/ordenes/generar', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
     });
-
-    // 2️⃣ Vemos el status de la respuesta
-    console.log('🌐 [NuevaOrden] POST status →', res.status);
-
     const j = await res.json();
-
-    // 3️⃣ Y el cuerpo de la respuesta
-    console.log('📣 [NuevaOrden] API response →', j);
 
     if (!res.ok) {
       setErr(j.error || 'Error al generar');
     } else {
-      setMsg(`✔ Orden emitida: ${j.folio}`);
+      // guarda folio y token para mostrar enlace
+      setResultado({ folio: j.folio, token: j.verify_token });
     }
   };
 
   return (
-    <main style={{ padding: 16, maxWidth: 480 }}>
+    <main>
       <h2>Nueva Orden de Pago</h2>
-      <form
-        onSubmit={guardar}
-        style={{ display: 'grid', gap: 12, marginTop: 16 }}
-      >
-        {/* 1. ID público */}
+      <form onSubmit={guardar} style={{ display:'grid', gap:12, maxWidth:400 }}>
         <input
           name="idPublico"
           placeholder="ID Público del colaborador"
@@ -79,18 +60,12 @@ export default function NuevaOrden() {
           required
         />
 
-        {/* 2. Frecuencia */}
-        <select
-          name="frecuencia"
-          value={campos.frecuencia}
-          onChange={cambia}
-        >
+        <select name="frecuencia" value={campos.frecuencia} onChange={cambia}>
           <option value="MENSUAL">Mensual</option>
           <option value="QUINCENAL">Quincenal</option>
           <option value="DIAS">Por días</option>
         </select>
 
-        {/* 3. Año y mes / quincena */}
         {campos.frecuencia !== 'DIAS' && (
           <>
             <input
@@ -110,35 +85,18 @@ export default function NuevaOrden() {
               required
             />
             {campos.frecuencia === 'QUINCENAL' && (
-              <select
-                name="quincena"
-                value={campos.quincena}
-                onChange={cambia}
-              >
-                <option value="Q1">Q1 (días 1–15)</option>
-                <option value="Q2">Q2 (días 16–fin)</option>
+              <select name="quincena" value={campos.quincena} onChange={cambia}>
+                <option value="Q1">Q1 (1–15)</option>
+                <option value="Q2">Q2 (16–fin)</option>
               </select>
             )}
           </>
         )}
 
-        {/* 4. Rango de días */}
         {campos.frecuencia === 'DIAS' && (
           <>
-            <input
-              name="inicio"
-              type="date"
-              value={campos.inicio}
-              onChange={cambia}
-              required
-            />
-            <input
-              name="fin"
-              type="date"
-              value={campos.fin}
-              onChange={cambia}
-              required
-            />
+            <input name="inicio" type="date" value={campos.inicio} onChange={cambia} required/>
+            <input name="fin"    type="date" value={campos.fin}    onChange={cambia} required/>
             <input
               name="dias_laborados"
               type="number"
@@ -150,7 +108,6 @@ export default function NuevaOrden() {
           </>
         )}
 
-        {/* 5. Otros descuentos */}
         <input
           name="otros_descuentos"
           type="number"
@@ -160,16 +117,24 @@ export default function NuevaOrden() {
           onChange={cambia}
         />
 
-        <button type="submit" style={{ padding: '8px 16px' }}>
-          Generar
-        </button>
+        <button type="submit">Generar</button>
       </form>
 
-      {err && (
-        <p style={{ color: 'red', marginTop: 12 }}>Error: {err}</p>
-      )}
-      {msg && (
-        <p style={{ color: 'green', marginTop: 12 }}>{msg}</p>
+      {err && <p style={{ color:'red' }}>Error: {err}</p>}
+
+      {resultado && (
+        <div style={{ marginTop:16, color:'green' }}>
+          <p>✔ Orden emitida: <strong>{resultado.folio}</strong></p>
+          <p>
+            <a
+              href={`/api/ordenes/pdf/${resultado.token}`}
+              target="_blank"
+              style={{ textDecoration:'underline' }}
+            >
+              Ver / Descargar PDF
+            </a>
+          </p>
+        </div>
       )}
     </main>
   );
