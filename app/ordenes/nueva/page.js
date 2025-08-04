@@ -1,68 +1,140 @@
+// app/ordenes/nueva/page.js
 'use client';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
+import { useState } from 'react';
 
-export default function OrdenesPage() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function NuevaOrden() {
+  const [campos, setCampos] = useState({
+    emailColaborador: '',
+    frecuencia: 'MENSUAL',
+    anio: '',
+    mes: '',
+    quincena: 'Q1',
+    inicio: '',
+    fin: '',
+    dias_laborados: '',
+    otros_descuentos: '',
+  });
+  const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true); setErr('');
-      const { data: user } = await supabase.auth.getUser();
-      if (!user?.user) { setErr('Sesión no encontrada'); return; }
+  const cambia = (e) =>
+    setCampos({ ...campos, [e.target.name]: e.target.value });
 
-      // Busca el colaborador de este usuario
-      const { data: col, error: eCol } = await supabase
-        .from('colaborador').select('id').eq('email', user.user.email).single();
-      if (eCol || !col) { setErr('Colaborador no encontrado'); return; }
-
-      // Trae sus órdenes
-      const { data, error } = await supabase
-        .from('orden_pago')
-        .select('folio, periodo, frecuencia, neto, estado, verify_token')
-        .eq('colaborador_id', col.id)
-        .order('created_at', { ascending: false });
-
-      if (error) setErr(error.message); else setRows(data || []);
-      setLoading(false);
+  const guardar = async (e) => {
+    e.preventDefault();
+    setMsg(''); setErr('');
+    // Convierte strings a números donde corresponda
+    const payload = {
+      ...campos,
+      anio: campos.anio ? +campos.anio : undefined,
+      mes: campos.mes ? +campos.mes : undefined,
+      dias_laborados: campos.dias_laborados ? +campos.dias_laborados : undefined,
+      otros_descuentos: campos.otros_descuentos
+        ? +campos.otros_descuentos
+        : undefined,
+    };
+    const r = await fetch('/api/ordenes/generar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      setErr(j.error || 'Error al generar');
+      return;
     }
-    load();
-  }, []);
-
-  if (loading) return <main><p>Cargando…</p></main>;
-  if (err)     return <main><p style={{color:'red'}}>Error: {err}</p></main>;
+    setMsg(`✔️ Orden emitida — Folio: ${j.folio}`);
+  };
 
   return (
     <main>
-      <h2>Mis Órdenes</h2>
-      {rows.length === 0
-        ? <p>No hay órdenes emitidas.</p>
-        : (
-          <table style={{ borderCollapse:'collapse', maxWidth:800, width:'100%' }}>
-            <thead><tr>
-              <th style={{textAlign:'left'}}>Periodo</th>
-              <th>Folio</th><th>Frecuencia</th><th>Neto</th><th>Estado</th><th>Acciones</th>
-            </tr></thead>
-            <tbody>
-              {rows.map(r => (
-                <tr key={r.folio} style={{ borderBottom:'1px solid #eee' }}>
-                  <td>{r.periodo}</td>
-                  <td>{r.folio}</td>
-                  <td>{r.frecuencia}</td>
-                  <td>Q {r.neto}</td>
-                  <td>{r.estado}</td>
-                  <td>
-                    <Link href={`/verify/${r.verify_token}`} target="_blank">Verificar</Link>{' | '}
-                    <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank">PDF</a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <h2>Nueva Orden de Pago</h2>
+      <form onSubmit={guardar} style={{ display:'grid', gap:12, maxWidth:420 }}>
+        <input
+          name="emailColaborador"
+          type="email"
+          placeholder="Correo del colaborador"
+          value={campos.emailColaborador}
+          onChange={cambia}
+          required
+        />
+
+        <select name="frecuencia" value={campos.frecuencia} onChange={cambia}>
+          <option value="MENSUAL">Mensual</option>
+          <option value="QUINCENAL">Quincenal</option>
+          <option value="DIAS">Por días</option>
+        </select>
+
+        {campos.frecuencia !== 'DIAS' ? (
+          <>
+            <input
+              name="anio"
+              type="number"
+              placeholder="Año"
+              value={campos.anio}
+              onChange={cambia}
+              required
+            />
+            <input
+              name="mes"
+              type="number"
+              placeholder="Mes (1-12)"
+              value={campos.mes}
+              onChange={cambia}
+              required
+            />
+            {campos.frecuencia === 'QUINCENAL' && (
+              <select
+                name="quincena"
+                value={campos.quincena}
+                onChange={cambia}
+              >
+                <option value="Q1">Q1 (1–15)</option>
+                <option value="Q2">Q2 (16–fin)</option>
+              </select>
+            )}
+          </>
+        ) : (
+          <>
+            <input
+              name="inicio"
+              type="date"
+              value={campos.inicio}
+              onChange={cambia}
+              required
+            />
+            <input
+              name="fin"
+              type="date"
+              value={campos.fin}
+              onChange={cambia}
+              required
+            />
+            <input
+              name="dias_laborados"
+              type="number"
+              placeholder="Días laborados"
+              value={campos.dias_laborados}
+              onChange={cambia}
+              required
+            />
+          </>
         )}
+
+        <input
+          name="otros_descuentos"
+          type="number"
+          step="0.01"
+          placeholder="Otros descuentos (opcional)"
+          value={campos.otros_descuentos}
+          onChange={cambia}
+        />
+
+        <button type="submit">Generar</button>
+      </form>
+
+      {err &&   <p style={{ color:'red' }}>{err}</p>}
+      {msg &&   <p style={{ color:'green' }}>{msg}</p>}
     </main>
   );
 }
