@@ -12,34 +12,31 @@ export default function OrdenesPage() {
   useEffect(() => {
     async function load() {
       setLoading(true); setErr('');
-      // 1) Obtiene usuario actual
+
+      // 1) Traer roles de usuario
       const { data: userData } = await supabase.auth.getUser();
       const user = userData.user;
-      if (!user) {
-        setErr('Sesión no encontrada'); 
-        setLoading(false);
-        return;
-      }
+      if (!user) return setErr('Sesión no encontrada');
 
-      // 2) Busca el colaborador registro con ese email
-      const { data: col, error: eCol } = await supabase
-        .from('colaborador')
-        .select('id')
-        .eq('email', user.email)
-        .single();
-      if (eCol || !col) {
-        setErr('Colaborador no encontrado');
-        setLoading(false);
-        return;
-      }
+      const { data: profile } = await supabase
+        .from('profiles').select('role').eq('user_id', user.id).single();
 
-      // 3) Trae las órdenes de pago de ese colaborador
-      const { data, error } = await supabase
+      const isAdmin = ['RH','FINANZAS','ADMIN'].includes(profile.role);
+
+      // 2) Consulta de órdenes
+      let query = supabase
         .from('orden_pago')
-        .select('folio, periodo, frecuencia, neto, estado, verify_token')
-        .eq('colaborador_id', col.id)
-        .order('created_at', { ascending: false });
+        .select('folio,periodo,frecuencia,neto,estado,verify_token')
+        .order('created_at',{ascending:false});
 
+      if (!isAdmin) {
+        // colaborador normal → solo sus órdenes
+        const { data: col } = await supabase
+          .from('colaborador').select('id').eq('email', user.email).single();
+        query = query.eq('colaborador_id', col.id);
+      }
+
+      const { data, error } = await query;
       if (error) setErr(error.message);
       else setRows(data || []);
       setLoading(false);
@@ -52,42 +49,19 @@ export default function OrdenesPage() {
 
   return (
     <main>
-      <h2>Mis Órdenes</h2>
-      {rows.length === 0 ? (
-        <p>No hay órdenes emitidas.</p>
-      ) : (
-        <table style={{ borderCollapse:'collapse', maxWidth:800, width:'100%' }}>
-          <thead>
-            <tr>
-              <th style={{textAlign:'left'}}>Periodo</th>
-              <th>Folio</th>
-              <th>Frecuencia</th>
-              <th>Neto</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.folio} style={{ borderBottom:'1px solid #eee' }}>
-                <td>{r.periodo}</td>
-                <td>{r.folio}</td>
-                <td>{r.frecuencia}</td>
-                <td>Q {r.neto}</td>
-                <td>{r.estado}</td>
-                <td>
-                  <Link href={`/verify/${r.verify_token}`} target="_blank">
-                    Verificar
-                  </Link>{' | '}
-                  <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank">
-                    PDF
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <h2>Órdenes</h2>
+      {rows.length === 0
+        ? <p>No hay órdenes.</p>
+        : (
+          <table style={{ borderCollapse:'collapse', width:'100%', maxWidth:800 }}>
+            <thead>…</thead>
+            <tbody>
+              {rows.map(r=>(
+                <tr key={r.verify_token}>…</tr>
+              ))}
+            </tbody>
+          </table>
+        )}
     </main>
   );
 }
