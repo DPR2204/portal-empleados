@@ -1,7 +1,8 @@
+// app/layout.js
 export const metadata = {
   title: 'Portal de Empleados',
   description: 'MVP Portal Empleados - Órdenes de Pago',
-};
+}
 
 export default function RootLayout({ children }) {
   return (
@@ -20,16 +21,17 @@ export default function RootLayout({ children }) {
             <h1 style={{ fontSize: 20 }}>Portal de Empleados</h1>
 
             {/* Navegación */}
-            <nav style={{ display: 'flex', gap: 16 }}>
-  <a href="/">Inicio</a>
-  <a href="/ordenes">Mis Órdenes</a>
-  <a href="/ordenes/nueva">Nueva Orden</a>
-  <a href="/colaboradores/nuevo">Nuevo Colaborador</a>
-</nav>
+            <nav style={{ display: 'flex', gap: 16, fontSize: 14 }}>
+              <a href="/">Inicio</a>
+              <a href="/ordenes">Mis Órdenes</a>
+              <a href="/ordenes/nueva">Nueva Orden</a>
+              <a href="/colaboradores/nuevo">Nuevo Colaborador</a>
+              <a href="/verify">Verificar Folio</a>
+            </nav>
           </header>
 
           {/* ---------- Contenido de la página ---------- */}
-          {children}
+          <main>{children}</main>
 
           {/* ---------- Pie ---------- */}
           <footer style={{ marginTop: 40, fontSize: 12, color: '#666' }}>
@@ -38,5 +40,5 @@ export default function RootLayout({ children }) {
         </div>
       </body>
     </html>
-  );
+  )
 }
