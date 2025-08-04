@@ -1,47 +1,76 @@
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { randomUUID } from 'crypto';
+// app/api/colaboradores/crear/route.js
+import { NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
-export async function POST(req) {
+export async function POST(request) {
   try {
-    const { nombres, apellidos, email, sueldo_base, tarifa_diaria } =
-      await req.json();
+    const body = await request.json()
 
-    // Validación mínima
-    if (![nombres, apellidos, email].every(Boolean)) {
-      return new Response(
-        JSON.stringify({ error: 'Faltan campos obligatorios' }),
-        { status: 400 }
-      );
-    }
-
-    // Genera ID público tipo “CO-ABCDE”
-    const id_publico = 'CO-' +
-      randomUUID().replace(/-/g, '').slice(0, 5).toUpperCase();
-
-    const { error } = await supabaseAdmin.from('colaborador').insert({
-      id_publico,
+    // Validar campos necesarios
+    const {
       nombres,
       apellidos,
+      dpi,
       email,
-      sueldo_base: +sueldo_base || 0,
-      tarifa_diaria: +tarifa_diaria || 0,
-    });
+      telefono,
+      puesto,
+      sucursal,
+      sueldo_base,
+      frecuencia_default,
+      tarifa_diaria,
+      fecha_ingreso,
+      estado,
+    } = body
 
-    if (error) {
-      // 23505 = violación de unique (correo duplicado)
-      if (error.code === '23505') {
-        return new Response(
-          JSON.stringify({ error: 'El correo ya está registrado' }),
-          { status: 409 }
-        );
-      }
-      throw error;
+    if (!nombres || !apellidos || !dpi || !email || sueldo_base == null) {
+      return NextResponse.json(
+        { error: 'Faltan campos requeridos' },
+        { status: 400 }
+      )
     }
 
-    return new Response(JSON.stringify({ ok: true, id_publico }), { status: 200 });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: e.message || 'Error' }), {
-      status: 500,
-    });
+    // Generar un ID público único (6 caracteres)
+    const shortId = randomUUID().split('-')[0].toUpperCase()
+    const idPublico = `CO-${shortId}`
+
+    // Preparar objeto a insertar
+    const newCol = {
+      id_publico:     idPublico,
+      nombres,
+      apellidos,
+      dpi,
+      email,
+      telefono:       telefono || null,
+      puesto:         puesto || null,
+      sucursal:       sucursal || null,
+      sueldo_base:    sueldo_base,
+      frecuencia_default: frecuencia_default || 'MENSUAL',
+      tarifa_diaria:  tarifa_diaria != null ? tarifa_diaria : null,
+      fecha_ingreso:  fecha_ingreso || null,
+      estado:         estado === true || estado === 'true',
+    }
+
+    // Insertar en Supabase
+    const { data, error } = await supabaseAdmin
+      .from('colaborador')
+      .insert(newCol)
+      .select('id_publico')
+      .single()
+
+    if (error) {
+      throw error
+    }
+
+    return NextResponse.json(
+      { id_publico: data.id_publico },
+      { status: 201 }
+    )
+  } catch (err) {
+    console.error('API /colaboradores/crear error:', err)
+    return NextResponse.json(
+      { error: err.message || 'Error inesperado' },
+      { status: 500 }
+    )
   }
 }
