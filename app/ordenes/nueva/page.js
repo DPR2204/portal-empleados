@@ -1,88 +1,68 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
+import Link from 'next/link';
+import { supabase } from '../../lib/supabaseClient';
 
-export default function NuevaOrden() {
-  const [email, setEmail] = useState('');
-  const [frecuencia, setFrecuencia] = useState('MENSUAL');
-  const [anio, setAnio] = useState(new Date().getFullYear());
-  const [mes, setMes] = useState(new Date().getMonth()+1); // 1..12
-  const [quincena, setQuincena] = useState('Q1');
-  const [inicio, setInicio] = useState('');
-  const [fin, setFin] = useState('');
-  const [dias, setDias] = useState('');
-  const [otrosDesc, setOtrosDesc] = useState('');
-  const [resp, setResp] = useState(null);
+export default function OrdenesPage() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data?.user?.email || ''));
+    async function load() {
+      setLoading(true); setErr('');
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) { setErr('Sesión no encontrada'); return; }
+
+      // Busca el colaborador de este usuario
+      const { data: col, error: eCol } = await supabase
+        .from('colaborador').select('id').eq('email', user.user.email).single();
+      if (eCol || !col) { setErr('Colaborador no encontrado'); return; }
+
+      // Trae sus órdenes
+      const { data, error } = await supabase
+        .from('orden_pago')
+        .select('folio, periodo, frecuencia, neto, estado, verify_token')
+        .eq('colaborador_id', col.id)
+        .order('created_at', { ascending: false });
+
+      if (error) setErr(error.message); else setRows(data || []);
+      setLoading(false);
+    }
+    load();
   }, []);
 
-  const generar = async (e) => {
-    e.preventDefault();
-    setErr(''); setResp(null);
-    const payload = { emailColaborador: email, frecuencia, anio, mes, quincena, inicio, fin, dias_laborados: dias, otros_descuentos: otrosDesc };
-    const r = await fetch('/api/ordenes/generar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    const j = await r.json();
-    if (!r.ok) { setErr(j.error || 'Error'); return; }
-    setResp(j);
-  };
+  if (loading) return <main><p>Cargando…</p></main>;
+  if (err)     return <main><p style={{color:'red'}}>Error: {err}</p></main>;
 
   return (
     <main>
-      <h2>Nueva Orden</h2>
-      <form onSubmit={generar} style={{ display:'grid', gap:12, maxWidth:520 }}>
-        <div><label>Tu correo</label><input value={email} readOnly style={{ width:'100%' }} /></div>
-        <div>
-          <label>Frecuencia</label>
-          <select value={frecuencia} onChange={e=>setFrecuencia(e.target.value)}>
-            <option value="MENSUAL">MENSUAL</option>
-            <option value="QUINCENAL">QUINCENAL</option>
-            <option value="DIAS">DÍAS</option>
-          </select>
-        </div>
-        {frecuencia === 'MENSUAL' && (
-          <div style={{ display:'flex', gap:8 }}>
-            <div><label>Año</label><input type="number" value={anio} onChange={e=>setAnio(e.target.value)} /></div>
-            <div><label>Mes (1-12)</label><input type="number" value={mes} onChange={e=>setMes(e.target.value)} /></div>
-            <small>Se paga el día 1 del mes siguiente.</small>
-          </div>
+      <h2>Mis Órdenes</h2>
+      {rows.length === 0
+        ? <p>No hay órdenes emitidas.</p>
+        : (
+          <table style={{ borderCollapse:'collapse', maxWidth:800, width:'100%' }}>
+            <thead><tr>
+              <th style={{textAlign:'left'}}>Periodo</th>
+              <th>Folio</th><th>Frecuencia</th><th>Neto</th><th>Estado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.folio} style={{ borderBottom:'1px solid #eee' }}>
+                  <td>{r.periodo}</td>
+                  <td>{r.folio}</td>
+                  <td>{r.frecuencia}</td>
+                  <td>Q {r.neto}</td>
+                  <td>{r.estado}</td>
+                  <td>
+                    <Link href={`/verify/${r.verify_token}`} target="_blank">Verificar</Link>{' | '}
+                    <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank">PDF</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-        {frecuencia === 'QUINCENAL' && (
-          <div style={{ display:'flex', gap:8, alignItems:'end' }}>
-            <div><label>Año</label><input type="number" value={anio} onChange={e=>setAnio(e.target.value)} /></div>
-            <div><label>Mes</label><input type="number" value={mes} onChange={e=>setMes(e.target.value)} /></div>
-            <div>
-              <label>Quincena</label>
-              <select value={quincena} onChange={e=>setQuincena(e.target.value)}>
-                <option value="Q1">Q1 (1–15)</option>
-                <option value="Q2">Q2 (16–fin)</option>
-              </select>
-            </div>
-          </div>
-        )}
-        {frecuencia === 'DIAS' && (
-          <div style={{ display:'grid', gap:8 }}>
-            <div><label>Inicio</label><input type="date" value={inicio} onChange={e=>setInicio(e.target.value)} /></div>
-            <div><label>Fin</label><input type="date" value={fin} onChange={e=>setFin(e.target.value)} /></div>
-            <div><label>Días laborados</label><input type="number" step="0.5" value={dias} onChange={e=>setDias(e.target.value)} /></div>
-          </div>
-        )}
-        <div><label>Otros descuentos (opcional)</label><input type="number" step="0.01" value={otrosDesc} onChange={e=>setOtrosDesc(e.target.value)} /></div>
-        <button type="submit" style={{ padding:10, border:'1px solid #ccc', borderRadius:8 }}>Generar</button>
-      </form>
-
-      {err && <p style={{ color:'red', marginTop:12 }}>Error: {err}</p>}
-      {resp && (
-        <div style={{ marginTop:16, border:'1px solid #eee', padding:12 }}>
-          <h3>Orden creada</h3>
-          <p><strong>Folio:</strong> {resp.folio}</p>
-          <p><strong>Periodo:</strong> {resp.periodo}</p>
-          <p><strong>Bruto:</strong> Q {resp.bruto} | <strong>Adelantos:</strong> Q {resp.adelantos} | <strong>Neto:</strong> Q {resp.neto}</p>
-          <p><a href={`/verify/${resp.verify_token}`} target="_blank">Verificar (link con token)</a></p>
-        </div>
-      )}
     </main>
   );
 }
