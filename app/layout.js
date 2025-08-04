@@ -2,25 +2,20 @@
 export const metadata = {
   title: 'Portal de Empleados',
   description: 'MVP Portal Empleados - Órdenes de Pago',
-}
+};
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Ubuntu' }}>
         <div style={{ maxWidth: 960, margin: '0 auto', padding: 16 }}>
-          {/* ---------- Encabezado ---------- */}
-          <header
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 24,
-            }}
-          >
+          <header style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 24,
+          }}>
             <h1 style={{ fontSize: 20 }}>Portal de Empleados</h1>
-
-            {/* Navegación */}
             <nav style={{ display: 'flex', gap: 16, fontSize: 14 }}>
               <a href="/">Inicio</a>
               <a href="/ordenes">Mis Órdenes</a>
@@ -30,15 +25,14 @@ export default function RootLayout({ children }) {
             </nav>
           </header>
 
-          {/* ---------- Contenido de la página ---------- */}
-          <main>{children}</main>
+          {/* Aquí va el contenido de cada página */}
+          {children}
 
-          {/* ---------- Pie ---------- */}
           <footer style={{ marginTop: 40, fontSize: 12, color: '#666' }}>
             © {new Date().getFullYear()} Portal Empleados
           </footer>
         </div>
       </body>
     </html>
-  )
+  );
 }
