@@ -1,56 +1,27 @@
 // app/api/ordenes/generar/route.js
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
 
-function pad(n) { return n < 10 ? '0' + n : '' + n; }
-function fmt(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-function lastDayOfMonth(y, m) { return new Date(y, m, 0).getDate(); }
-
+function pad(n){ return n < 10 ? '0' + n : '' + n; }
+function lastDayOfMonth(y,m){ return new Date(y,m,0).getDate(); }
 function buildPeriodo({ frecuencia, anio, mes, quincena, inicio, fin }) {
-  if (frecuencia === 'MENSUAL') {
-    const y = +anio, m = +mes;
-    const fi = new Date(y, m - 1, 1);
-    const ff = new Date(y, m - 1, lastDayOfMonth(y, m));
-    return { id: `${y}-${pad(m)}-M`, fechaInicio: fi, fechaFin: ff, fechaPago: new Date(y, m, 1) };
-  }
-  if (frecuencia === 'QUINCENAL') {
-    const y = +anio, m = +mes;
-    if (quincena === 'Q1') {
-      return {
-        id: `${y}-${pad(m)}-Q1`,
-        fechaInicio: new Date(y, m - 1, 1),
-        fechaFin: new Date(y, m - 1, 15),
-        fechaPago: new Date(y, m - 1, 15),
-      };
-    }
-    const ld = lastDayOfMonth(y, m);
-    return {
-      id: `${y}-${pad(m)}-Q2`,
-      fechaInicio: new Date(y, m - 1, 16),
-      fechaFin: new Date(y, m - 1, ld),
-      fechaPago: new Date(y, m - 1, ld),
-    };
-  }
-  if (frecuencia === 'DIAS') {
-    const fi = new Date(inicio), ff = new Date(fin);
-    return { id: `${inicio.replaceAll('-', '')}-${fin.replaceAll('-', '')}-D`, fechaInicio: fi, fechaFin: ff, fechaPago: ff };
-  }
-  throw new Error('Frecuencia inválida');
+  /* ... tu función idéntica ... */
 }
 
 export async function POST(req) {
   try {
     const body = await req.json();
+    // antes tenías { emailColaborador, ... }
     const {
-      idPublico, frecuencia, anio, mes, quincena,
-      inicio, fin, dias_laborados, otros_descuentos = 0
+      idPublico,
+      frecuencia,
+      anio, mes, quincena, inicio, fin,
+      dias_laborados, otros_descuentos = 0
     } = body;
 
-    // 1) Busca colaborador por idPublico
+    // Busca al colaborador POR SU ID PÚBLICO
     const { data: colabs, error: errColab } = await supabaseAdmin
       .from('colaborador')
-      .select('id, sueldo_base, tarifa_diaria')
+      .select('id,id_publico,email,sueldo_base,tarifa_diaria')
       .eq('id_publico', idPublico)
       .limit(1);
 
@@ -59,37 +30,36 @@ export async function POST(req) {
     if (!colab) {
       return new Response(
         JSON.stringify({ error: 'Colaborador no encontrado' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
+        { status: 404 }
       );
     }
 
-    // 2) Calcula periodo y montos
+    // Calcula periodo y montos
     const per = buildPeriodo({ frecuencia, anio, mes, quincena, inicio, fin });
-    const fecha_inicio = fmt(per.fechaInicio),
-          fecha_fin    = fmt(per.fechaFin),
-          fecha_pago   = fmt(per.fechaPago);
+    const fecha_inicio = `${per.fechaInicio.getFullYear()}-${pad(per.fechaInicio.getMonth()+1)}-${pad(per.fechaInicio.getDate())}`;
+    const fecha_fin     = `${per.fechaFin.getFullYear()    }-${pad(per.fechaFin.getMonth()+1)    }-${pad(per.fechaFin.getDate())    }`;
+    const fecha_pago    = `${per.fechaPago.getFullYear()   }-${pad(per.fechaPago.getMonth()+1)   }-${pad(per.fechaPago.getDate())   }`;
 
     let bruto = 0;
-    if (frecuencia === 'MENSUAL') bruto = +colab.sueldo_base || 0;
+    if (frecuencia === 'MENSUAL')    bruto = +colab.sueldo_base || 0;
     else if (frecuencia === 'QUINCENAL') bruto = (+colab.sueldo_base || 0) / 2;
-    else bruto = (+colab.tarifa_diaria || 0) * (+dias_laborados || 0);
+    else if (frecuencia === 'DIAS')  bruto = (+colab.tarifa_diaria || 0) * (+dias_laborados || 0);
 
-    // 3) Suma adelantos
-    const { data: adel, error: errAdel } = await supabaseAdmin
+    // Adelantos en el periodo
+    const { data: adel } = await supabaseAdmin
       .from('adelanto')
       .select('monto')
       .eq('colaborador_id', colab.id)
       .gte('fecha', fecha_inicio)
       .lte('fecha', fecha_fin)
       .eq('liquidado', false);
+    const sumaAdelantos = (adel||[]).reduce((a,x)=>a+(+x.monto||0),0);
 
-    if (errAdel) throw errAdel;
-    const sumaAdel = (adel || []).reduce((a, x) => a + (+x.monto || 0), 0);
+    const neto = Math.max(0, bruto - sumaAdelantos - (+otros_descuentos||0));
+    // Ahora sí usamos el id_publico para el folio
+    const folio = `${colab.id_publico}-${per.id}-${Math.random().toString().slice(2,6)}`;
 
-    const neto = Math.max(0, bruto - sumaAdel - (+otros_descuentos || 0));
-    const folio = `${colab.id_publico}-${per.id}-${Math.random().toString().slice(2, 6)}`;
-
-    // 4) Inserta orden de pago
+    // Inserta
     const { data: inserted, error: errIns } = await supabaseAdmin
       .from('orden_pago')
       .insert({
@@ -97,49 +67,39 @@ export async function POST(req) {
         colaborador_id: colab.id,
         periodo: per.id,
         frecuencia,
-        fecha_inicio,
-        fecha_fin,
-        fecha_pago_esperada: fecha_pago,
-        dias_laborados: frecuencia === 'DIAS' ? (+dias_laborados || 0) : null,
-        bruto,
-        adelantos: sumaAdel,
-        otros_descuentos: +otros_descuentos,
-        neto,
-        estado: 'EMITIDO'
+        fecha_inicio, fecha_fin, fecha_pago_esperada: fecha_pago,
+        dias_laborados: frecuencia === 'DIAS' ? (+dias_laborados||0) : null,
+        bruto, adelantos: sumaAdelantos, otros_descuentos: (+otros_descuentos||0),
+        neto, estado: 'EMITIDO'
       })
-      .select('verify_token, folio')
-      .single();
+      .select('folio, verify_token').single();
 
     if (errIns) {
       if (errIns.code === '23505') {
         return new Response(
-          JSON.stringify({ error: 'Ya existe una orden para ese período' }),
-          { status: 409, headers: { 'Content-Type': 'application/json' } }
+          JSON.stringify({ error:'Ya existe una orden para ese periodo y frecuencia' }),
+          { status:409 }
         );
       }
       throw errIns;
     }
 
-    // 5) Respuesta exitosa
+    // Devolvemos folio y token
     return new Response(
       JSON.stringify({
         ok: true,
         folio: inserted.folio,
         verify_token: inserted.verify_token,
         periodo: per.id,
-        bruto,
-        adelantos: sumaAdel,
-        neto
+        bruto, adelantos: sumaAdelantos, neto
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200 }
     );
-
   } catch (e) {
-    // 6) Log interno y devuelve JSON siempre
-    console.error('[api/ordenes/generar] ERROR:', e);
+    console.error(e);
     return new Response(
       JSON.stringify({ error: e.message || 'Error interno' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500 }
     );
   }
 }
