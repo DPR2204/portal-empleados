@@ -12,13 +12,13 @@ export default function VerifyIndexPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const normalized = folio.trim().toUpperCase();
-    if (!normalized) {
+    const f = folio.trim().toUpperCase();
+    if (!f) {
       setError('Por favor ingresa un folio.');
       return;
     }
 
-    const res = await fetch(`/api/ordenes/folio/${encodeURIComponent(normalized)}`);
+    const res = await fetch(`/api/ordenes/folio/${encodeURIComponent(f)}`);
     if (!res.ok) {
       setError('Folio no encontrado');
       return;
