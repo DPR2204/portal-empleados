@@ -51,7 +51,7 @@ export async function GET(request, { params }) {
     // Dimensiones y espaciados
     const MARGIN_X       = 50
     const SMALL_GAP      = 4
-    const SECTION_GAP    = 20
+    const SECTION_GAP    = 50
     const SIGNATURE_GAP  = 90 // espacio vertical entre bloques de firmas
 
     // Sanitizador de texto (caracteres fuera de WinAnsi)
