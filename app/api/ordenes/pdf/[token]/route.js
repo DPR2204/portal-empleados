@@ -1,13 +1,13 @@
 // app/api/ordenes/pdf/[token]/route.js
-import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '../../../../../lib/supabaseAdmin';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '../../../../../lib/supabaseAdmin'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 export async function GET(request, { params }) {
   try {
-    const token = params.token; // verify_token
+    const token = params.token
 
-    // 1) Traer la orden + datos del colaborador
+    // 1. Recuperamos la orden y datos del colaborador
     const { data: rows, error } = await supabaseAdmin
       .from('orden_pago')
       .select(`
@@ -25,131 +25,114 @@ export async function GET(request, { params }) {
         colaborador:colaborador_id (nombres, apellidos, id_publico)
       `)
       .eq('verify_token', token)
-      .limit(1);
+      .limit(1)
 
-    if (error) throw error;
-    const op = rows?.[0];
+    if (error) throw error
+    const op = rows?.[0]
     if (!op) {
       return NextResponse.json(
         { error: 'Orden no encontrada' },
         { status: 404 }
-      );
+      )
     }
 
-    // 2) Crear el PDF
-    const pdf  = await PDFDocument.create();
-    const page = pdf.addPage([595.28, 841.89]); // A4
-    const font  = await pdf.embedFont(StandardFonts.Helvetica);
-    const fontB = await pdf.embedFont(StandardFonts.HelveticaBold);
+    // 2. Creamos el PDF
+    const pdf = await PDFDocument.create()
+    const page = pdf.addPage([595.28, 841.89]) // A4 portrait
+    const { width, height } = page.getSize()
 
-    // — Logo y cabecera estética —
-    const logoUrl   = 'https://static.wixstatic.com/media/acc6a6_c04fbb5b936a414fbfe6e4fe977a813b~mv2.png';
-    const logoBytes = await fetch(logoUrl).then(r => r.arrayBuffer());
-    const logoImage = await pdf.embedPng(logoBytes);
-    const logoDims  = logoImage.scale(0.5);
+    // 2.1 Fuentes
+    const font      = await pdf.embedFont(StandardFonts.Helvetica)
+    const fontBold  = await pdf.embedFont(StandardFonts.HelveticaBold)
 
-    const { width: pw } = page.getSize();
-    // centra y dibuja logo
+    // 2.2 Embebemos logo
+    const logoUrl = 'https://static.wixstatic.com/media/acc6a6_c04fbb5b936a414fbfe6e4fe977a813b~mv2.png'
+    const logoBytes = await fetch(logoUrl).then(res => res.arrayBuffer())
+    const logoImage = await pdf.embedPng(logoBytes)
+    const logoDims  = logoImage.scale(0.25) // ajusta escala según tamaño original
+
+    // Dibujamos logo centrado en el margen superior
+    const logoX = (width - logoDims.width) / 2
+    const logoY = height - logoDims.height - 20
     page.drawImage(logoImage, {
-      x: (pw - logoDims.width) / 2,
-      y: 770,
-      width:  logoDims.width,
-      height: logoDims.height,
-    });
+      x: logoX,
+      y: logoY,
+      width: logoDims.width,
+      height: logoDims.height
+    })
 
-    // helper de dibujo
-    const draw = (text, x, y, opts = {}) => {
-      const { size = 12, bold = false } = opts;
-      page.drawText(text, {
-        x, y, size,
-        font: bold ? fontB : font,
-        color: rgb(0, 0, 0),
-      });
-    };
+    // 2.3 Cabecera textual debajo del logo
+    let y = logoY - 16
+    const drawText = (txt, opts = {}) => {
+      const { x, size = 12, bold = false, align = 'left' } = opts
+      const fnt = bold ? fontBold : font
+      let drawX = x
+      // Si piden centrar
+      if (align === 'center') {
+        const w = fnt.widthOfTextAtSize(txt, size)
+        drawX = (width - w) / 2
+      }
+      page.drawText(txt, { x: drawX, y, size, font: fnt, color: rgb(0,0,0) })
+      y -= size + 4
+    }
 
-    // líneas de texto bajo el logo (centradas)
-    let y = 770 - logoDims.height - 10;
-    const centerX = pw / 2;
-    const headerLines = [
-      'Atitlán Rest y Café',
-      'Oficina de RRHH',
-      '+502 2268-1254 ext 102',
-      'keily_rrhh@atitlanrestaurantes.com',
-    ];
-    headerLines.forEach((line, i) => {
-      const size = i === 0 ? 14 : 10;
-      const textWidth = (i===0)
-        ? fontB.widthOfTextAtSize(line, size)
-        : font.widthOfTextAtSize(line, size);
-      draw(
-        line,
-        centerX - textWidth / 2,
-        y - i * (size + 4),
-        { size, bold: i === 0 }
-      );
-    });
+    drawText('Atitlán Rest y Café',      { size: 14, bold: true, align: 'center' })
+    drawText('Oficina de RRHH',          { size: 12, align: 'center' })
+    drawText('+502 2268-1254 ext 102',    { size: 10, align: 'center' })
+    drawText('keily_rrhh@atitlanrestaurantes.com', { size: 10, align: 'center' })
 
-    // baja cursor para datos
-    y = y - headerLines.length * 18 - 20;
-
-    // 3) Contenido de la orden
-    const fmtMoney = n =>
-      `Q ${Number(n||0).toLocaleString('es-GT', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-
-    draw('ORDEN DE PAGO', 50, y, { bold: true, size: 18 });
-    y -= 20;
-    draw(`Folio: ${op.folio}`, 50, y);               y -= 14;
-    draw(
+    // 2.4 Ahora dibujamos el contenido de la orden
+    y -= 16
+    drawText('ORDEN DE PAGO', { size: 18, bold: true, align: 'left', x: 50 })
+    drawText(`Folio: ${op.folio}`, { x: 50 })
+    drawText(
       `Colaborador: ${op.colaborador.nombres} ${op.colaborador.apellidos} (${op.colaborador.id_publico})`,
-      50, y
-    );                                               y -= 14;
-    draw(`Periodo: ${op.periodo}   Frecuencia: ${op.frecuencia}`, 50, y);
-    y -= 14;
-    draw(
+      { x: 50 }
+    )
+    drawText(`Periodo: ${op.periodo}   Frecuencia: ${op.frecuencia}`, { x: 50 })
+    drawText(
       `Del ${op.fecha_inicio} al ${op.fecha_fin} | Pago esperado: ${op.fecha_pago_esperada}`,
-      50, y
-    );
-    y -= 24;
+      { x: 50 }
+    )
 
-    draw('RESUMEN', 50, y, { bold: true, size: 14 });
-    y -= 16;
-    draw(`Bruto:        ${fmtMoney(op.bruto)}`, 50, y);        y -= 14;
-    draw(`Adelantos:    ${fmtMoney(op.adelantos)}`, 50, y);    y -= 14;
-    draw(`Otros desc.:  ${fmtMoney(op.otros_descuentos)}`, 50, y);
-    y -= 16;
-    draw(`NETO A PAGAR: ${fmtMoney(op.neto)}`, 50, y, { bold: true, size: 14 });
-    y -= 30;
+    y -= 12
+    drawText('RESUMEN', { x: 50, size: 14, bold: true })
+    const fmtMoney = n =>
+      `Q ${Number(n || 0).toLocaleString('es-GT',{ minimumFractionDigits:2, maximumFractionDigits:2 })}`
+    drawText(`Bruto:        ${fmtMoney(op.bruto)}`,         { x: 50 })
+    drawText(`Adelantos:    ${fmtMoney(op.adelantos)}`,     { x: 50 })
+    drawText(`Otros desc.:  ${fmtMoney(op.otros_descuentos)}`,{ x: 50 })
+    drawText(`NETO A PAGAR: ${fmtMoney(op.neto)}`,          { x: 50, size: 14, bold: true })
 
-    // firmas
-    const line = (x1, y1, x2) =>
-      page.drawLine({ start:{x:x1,y:y1}, end:{x:x2,y:y1}, thickness:0.8, color:rgb(0,0,0) });
+    // 2.5 Firmas
+    y -= 30
+    const drawLine = (x1,x2) => page.drawLine({
+      start:{ x:x1,y }, end:{ x:x2,y }, thickness:0.8, color:rgb(0,0,0)
+    })
+    drawLine(50, 260);   drawText('Colaborador',           { x: 100, y:y-12 })
+    drawLine(330, 540);  drawText('Aprobó (RH/Finanzas)',  { x: 380, y:y-12 })
+    y -= 40
+    drawLine(50, 260);   drawText('Entregado por',         { x: 100, y:y-12 })
+    drawLine(330, 540);  drawText('Recibido por',          { x: 380, y:y-12 })
+    y -= 30
+    drawText(`Emitido: ${op.created_at.toString().slice(0,10)}`, { x: 50, size: 10 })
 
-    line(50, y, 260);  draw('Colaborador',          100, y-12);
-    line(330, y, 540); draw('Aprobó (RH/Finanzas)', 380, y-12);
-    y -= 40;
-    line(50, y, 260);  draw('Entregado por',        100, y-12);
-    line(330, y, 540); draw('Recibido por',         380, y-12);
-    y -= 30;
-    draw(`Emitido: ${op.created_at.slice(0,10)}`, 50, y, { size: 10 });
-
-    // 4) Retornar PDF
-    const pdfBytes = await pdf.save();
+    // 3. Devolvemos el PDF
+    const pdfBytes = await pdf.save()
     return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
-        'Content-Type':        'application/pdf',
-        'Content-Disposition': `inline; filename="${op.folio}.pdf"`,
+        'Content-Type': 'application/pdf',
+        // inline o attachment según prefieras:
+        'Content-Disposition': `inline; filename="${op.folio}.pdf"`
       },
-    });
+    })
 
   } catch (e) {
-    console.error('PDF Error:', e);
+    console.error('PDF Error:', e)
     return NextResponse.json(
       { error: e.message || 'Error al generar PDF' },
       { status: 500 }
-    );
+    )
   }
 }
