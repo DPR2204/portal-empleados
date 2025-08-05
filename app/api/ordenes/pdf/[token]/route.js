@@ -48,9 +48,15 @@ export async function GET(request, { params }) {
     const SMALL_GAP    = 4               // espacio reducido entre líneas
     const SECTION_GAP  = 20              // espacio entre secciones grandes
 
+    // 🔧 Helper para limpiar texto de caracteres fuera de WinAnsi ---------------------------
+    const sanitize = txt => txt
+      .replace(/[\u2010-\u2015]/g, '-') // distintos guiones unicode → guion ASCII
+      .replace(/[\u00A0\u202F]/g, ' ')  // espacios irrompibles → espacio normal
+
     // Helper para dibujar texto -------------------------------------------------------------
     let cursorY = height - SECTION_GAP   // comenzamos un poco más abajo del borde
-    const drawText = (txt, { size = 12, bold = false, align = 'left' } = {}) => {
+    const drawText = (raw, { size = 12, bold = false, align = 'left' } = {}) => {
+      const txt = sanitize(String(raw ?? ''))
       const fnt = bold ? fontBold : font
       const textWidth = fnt.widthOfTextAtSize(txt, size)
       let x = MARGIN_X
@@ -65,7 +71,7 @@ export async function GET(request, { params }) {
     const logoBytes = await fetch(logoUrl).then(res => res.arrayBuffer())
     const logoImg   = await pdf.embedPng(logoBytes)
 
-    // Escalamos el logo a un ancho de ~150 pt como máximo ----------------------------------
+    // Escalamos el logo a un ancho de ~150 pt como máximo ----------------------------------
     const desiredLogoW = 150
     const scaleFactor  = desiredLogoW / logoImg.width
     const logoDims     = logoImg.scale(scaleFactor)
@@ -85,7 +91,7 @@ export async function GET(request, { params }) {
     // 2.4 Cabecera de contacto --------------------------------------------------------------
     drawText('Atitlán Rest y Café',      { size: 14, bold: true,  align: 'center' })
     drawText('Oficina de RRHH',          { size: 12,             align: 'center' })
-    drawText('+502 2268‑1254 ext 102',   { size: 10,             align: 'center' })
+    drawText('+502 2268-1254 ext 102',   { size: 10,             align: 'center' })
     drawText('keily_rrhh@atitlanrestaurantes.com', { size: 10, align: 'center' })
 
     // Espacio antes del cuerpo --------------------------------------------------------------
@@ -119,7 +125,7 @@ export async function GET(request, { params }) {
         thickness: 0.8,
         color: rgb(0, 0, 0),
       })
-      page.drawText(label, {
+      page.drawText(sanitize(label), {
         x: xStart + 60,
         y: lineY - 12,
         size: 10,
