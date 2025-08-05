@@ -44,19 +44,18 @@ export async function GET(request, { params }) {
 
     // 2.2 Variables de estilo ---------------------------------------------------------------
     const MARGIN_X     = 50              // margen lateral
-    const LINE_HEIGHT  = 14              // salto de línea base
     const SMALL_GAP    = 4               // espacio reducido entre líneas
     const SECTION_GAP  = 20              // espacio entre secciones grandes
 
     // 🔧 Helper para limpiar texto de caracteres fuera de WinAnsi ---------------------------
-    const sanitize = txt => txt
-      .replace(/[\u2010-\u2015]/g, '-') // distintos guiones unicode → guion ASCII
-      .replace(/[\u00A0\u202F]/g, ' ')  // espacios irrompibles → espacio normal
+    const sanitize = txt => String(txt ?? '')
+      .replace(/[\u2010-\u2015]/g, '-') // guiones Unicode → ASCII
+      .replace(/[\u00A0\u202F]/g, ' ')  // espacios duros → espacio normal
 
     // Helper para dibujar texto -------------------------------------------------------------
     let cursorY = height - SECTION_GAP   // comenzamos un poco más abajo del borde
     const drawText = (raw, { size = 12, bold = false, align = 'left' } = {}) => {
-      const txt = sanitize(String(raw ?? ''))
+      const txt = sanitize(raw)
       const fnt = bold ? fontBold : font
       const textWidth = fnt.widthOfTextAtSize(txt, size)
       let x = MARGIN_X
@@ -70,22 +69,15 @@ export async function GET(request, { params }) {
     const logoUrl   = 'https://static.wixstatic.com/media/acc6a6_c04fbb5b936a414fbfe6e4fe977a813b~mv2.png'
     const logoBytes = await fetch(logoUrl).then(res => res.arrayBuffer())
     const logoImg   = await pdf.embedPng(logoBytes)
-
-    // Escalamos el logo a un ancho de ~150 pt como máximo ----------------------------------
     const desiredLogoW = 150
-    const scaleFactor  = desiredLogoW / logoImg.width
-    const logoDims     = logoImg.scale(scaleFactor)
-    const logoX        = (width - logoDims.width) / 2
-    const logoY        = cursorY - logoDims.height + 6 // pequeño ajuste visual
+    const logoDims = logoImg.scale(desiredLogoW / logoImg.width)
+    const logoX    = (width - logoDims.width) / 2
+    const logoY    = cursorY - logoDims.height + 6
 
     page.drawImage(logoImg, {
-      x: logoX,
-      y: logoY,
-      width: logoDims.width,
-      height: logoDims.height,
+      x: logoX, y: logoY, width: logoDims.width, height: logoDims.height,
     })
 
-    // Movemos cursor justo debajo del logo --------------------------------------------------
     cursorY = logoY - SECTION_GAP
 
     // 2.4 Cabecera de contacto --------------------------------------------------------------
@@ -94,7 +86,6 @@ export async function GET(request, { params }) {
     drawText('+502 2268-1254 ext 102',   { size: 10,             align: 'center' })
     drawText('keily_rrhh@atitlanrestaurantes.com', { size: 10, align: 'center' })
 
-    // Espacio antes del cuerpo --------------------------------------------------------------
     cursorY -= SECTION_GAP
 
     // 2.5 Datos principales -----------------------------------------------------------------
@@ -104,7 +95,6 @@ export async function GET(request, { params }) {
     drawText(`Periodo: ${op.periodo}    Frecuencia: ${op.frecuencia}`)
     drawText(`Del ${op.fecha_inicio} al ${op.fecha_fin} | Pago esperado: ${op.fecha_pago_esperada}`)
 
-    // 2.6 Resumen ---------------------------------------------------------------------------
     cursorY -= SMALL_GAP
     drawText('RESUMEN', { bold: true })
 
@@ -114,7 +104,7 @@ export async function GET(request, { params }) {
     drawText(`Otros desc.:   ${money(op.otros_descuentos)}`)
     drawText(`NETO A PAGAR:  ${money(op.neto)}`, { bold: true })
 
-    // 2.7 Área de firmas -------------------------------------------------------------------
+    // 2.6 Área de firmas -------------------------------------------------------------------
     cursorY -= SECTION_GAP
 
     const drawSignatureLine = (label, xStart) => {
@@ -137,13 +127,16 @@ export async function GET(request, { params }) {
     // Primera fila de firmas
     drawSignatureLine('Colaborador',           MARGIN_X)
     drawSignatureLine('Aprobó (RH/Finanzas)',  width - MARGIN_X - 210)
-    // Segunda fila
+
+    // Segunda fila de firmas ---------------------------------------------------------------
     cursorY -= SECTION_GAP
     drawSignatureLine('Entregado por',         MARGIN_X)
     drawSignatureLine('Recibido por',          width - MARGIN_X - 210)
 
-    // 2.8 Fecha de emisión -----------------------------------------------------------------
-    cursorY -= SECTION_GAP / 1.5
+    // Espacio extra bajo el bloque de firmas
+    cursorY -= SECTION_GAP
+
+    // 2.7 Fecha de emisión -----------------------------------------------------------------
     drawText(`Emitido: ${op.created_at.toString().slice(0, 10)}`, { size: 10 })
 
     // 3. Devolvemos el PDF -----------------------------------------------------------------
