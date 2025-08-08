@@ -9,43 +9,37 @@ export default function OrdenesPage() {
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       setErr('');
       setLoading(true);
 
       // 1) Usuario actual
-      const { data: userData, error: eUser } = await supabase.auth.getUser();
-      const user = userData?.user;
+      const { data: { user }, error: eUser } = await supabase.auth.getUser();
       if (eUser || !user) {
         setErr('No hay sesión activa');
         setLoading(false);
         return;
       }
 
-      // 2) (opcional) enlaza por email si faltó; no hace nada si ya existe
-      try { await supabase.rpc('link_me'); } catch {}
-
-      // 3) Busca colaborador POR auth_user_id (no por email)
-      const { data: colRows, error: colErr } = await supabase
+      // 2) Buscar colaborador por auth_user_id (sin RPC, sin email)
+      const { data: col, error: colErr } = await supabase
         .from('colaborador')
         .select('id')
         .eq('auth_user_id', user.id)
-        .limit(1);
+        .maybeSingle(); // no truena si no hay
 
       if (colErr) {
         setErr(colErr.message || 'Error buscando colaborador');
         setLoading(false);
         return;
       }
-
-      const col = (colRows && colRows[0]) || null;
       if (!col) {
-        setErr('Colaborador desconocido');
+        setErr('Colaborador no ligado a tu cuenta');
         setLoading(false);
         return;
       }
 
-      // 4) Trae sus órdenes
+      // 3) Traer órdenes del colaborador
       const { data, error } = await supabase
         .from('orden_pago')
         .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
@@ -55,9 +49,7 @@ export default function OrdenesPage() {
       if (error) setErr(error.message);
       else setRows(data ?? []);
       setLoading(false);
-    };
-
-    load();
+    })();
   }, []);
 
   if (loading) return <main><p>Cargando órdenes…</p></main>;
@@ -87,17 +79,3 @@ export default function OrdenesPage() {
                 <td>{r.folio}</td>
                 <td>{r.frecuencia}</td>
                 <td>Q {Number(r.neto).toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
-                <td>{r.estado ?? '—'}</td>
-                <td>
-                  <Link href={`/verify/${r.verify_token}`} target="_blank" rel="noopener noreferrer">Verificar</Link>
-                  {' | '}
-                  <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank" rel="noopener noreferrer">PDF</a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </main>
-  );
-}
