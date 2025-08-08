@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient'; // ruta relativa desde /app/ordenes
 
 export default function OrdenesPage() {
   const [rows, setRows] = useState([]);
@@ -13,7 +13,7 @@ export default function OrdenesPage() {
       setErr('');
       setLoading(true);
 
-      // Usuario
+      // 1) Usuario actual
       const { data: { user }, error: eUser } = await supabase.auth.getUser();
       if (eUser || !user) {
         setErr('No hay sesión activa');
@@ -21,36 +21,42 @@ export default function OrdenesPage() {
         return;
       }
 
-      // Enlaza por email -> auth_user_id si hiciera falta (no falla si ya existe)
+      // 2) Enlaza por email -> auth_user_id en caso de que falte (no rompe si ya existe)
       try { await supabase.rpc('link_me'); } catch {}
 
-      // ----- Consulta por JOIN usando auth_user_id (intento 1: FK = colaborador_id) -----
-      let res = await supabase
-        .from('orden_pago')
-        .select(`
-          folio, periodo, frecuencia, neto, estado, verify_token, created_at,
-          colaborador:colaborador_id ( auth_user_id )
-        `)
-        .eq('colaborador.auth_user_id', user.id)
-        .order('created_at', { ascending: false });
+      // 3) Obtén el colaborador por auth_user_id (RLS ya lo permite)
+      const { data: colRows, error: colErr } = await supabase
+        .from('colaborador')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .limit(1);
 
-      // Si tu FK se llama 'colaborador' (sin _id), reintenta así:
-      if (res.error && String(res.error.message).toLowerCase().includes('colaborador_id')) {
-        res = await supabase
-          .from('orden_pago')
-          .select(`
-            folio, periodo, frecuencia, neto, estado, verify_token, created_at,
-            colaborador ( auth_user_id )
-          `)
-          .eq('colaborador.auth_user_id', user.id)
-          .order('created_at', { ascending: false });
+      if (colErr) {
+        setErr(colErr.message || 'Error buscando colaborador');
+        setLoading(false);
+        return;
       }
 
-      if (res.error) setErr(res.error.message);
-      else setRows(res.data ?? []);
+      const col = (colRows && colRows[0]) || null;
+      if (!col) {
+        setErr('Colaborador desconocido');
+        setLoading(false);
+        return;
+      }
+
+      // 4) Trae las órdenes de ese colaborador
+      const { data, error } = await supabase
+        .from('orden_pago')
+        .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
+        .eq('colaborador_id', col.id)
+        .order('created_at', { ascending: false });
+
+      if (error) setErr(error.message);
+      else setRows(data ?? []);
 
       setLoading(false);
     };
+
     load();
   }, []);
 
@@ -63,10 +69,10 @@ export default function OrdenesPage() {
       {rows.length === 0 ? (
         <p>No has generado aún ninguna orden.</p>
       ) : (
-        <table style={{ borderCollapse: 'collapse', width: '100%', maxWidth: 900 }}>
+        <table style={{ borderCollapse:'collapse', width:'100%', maxWidth:900 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Periodo</th>
+              <th style={{ textAlign:'left' }}>Periodo</th>
               <th>Folio</th>
               <th>Frecuencia</th>
               <th>Neto</th>
@@ -76,7 +82,7 @@ export default function OrdenesPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.folio} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={r.folio} style={{ borderBottom:'1px solid #eee' }}>
                 <td>{r.periodo}</td>
                 <td>{r.folio}</td>
                 <td>{r.frecuencia}</td>
