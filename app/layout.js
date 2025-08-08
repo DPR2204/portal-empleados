@@ -1,30 +1,36 @@
-'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+// app/layout.js  (SERVER component, sin "use client")
+export const metadata = {
+  title: 'Portal de Empleados',
+  description: 'MVP Portal Empleados - Órdenes de Pago',
+};
 
-export default function AdminOrdenesSearch() {
-  const [idpub, setIdpub] = useState('');
-  const router = useRouter();
-
+export default function RootLayout({ children }) {
   return (
-    <main>
-      <h2>Admin: Ver órdenes por ID de colaborador</h2>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const v = idpub.trim();
-          if (v) router.push(`/admin/ordenes/${encodeURIComponent(v)}`);
-        }}
-        style={{ marginTop: 12 }}
-      >
-        <input
-          value={idpub}
-          onChange={(e) => setIdpub(e.target.value)}
-          placeholder="Ej: CO-AB12CD"
-          style={{ padding: 8, width: 280, marginRight: 8 }}
-        />
-        <button type="submit">Ver historial</button>
-      </form>
-    </main>
+    <html lang="es">
+      <body style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Ubuntu' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: 16 }}>
+          <header
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 24,
+            }}
+          >
+            <h1 style={{ fontSize: 20 }}>Portal de Empleados</h1>
+            <nav style={{ display: 'flex', gap: 16, fontSize: 14 }}>
+              <a href="/">Inicio</a>
+              <a href="/ordenes">Mis Órdenes</a>
+              <a href="/ordenes/nueva">Nueva Orden</a>
+              <a href="/colaboradores/nuevo">Nuevo Colaborador</a>
+              <a href="/verify">Verificar Folio</a>
+              <a href="/admin/ordenes">Admin</a>
+            </nav>
+          </header>
+
+          {children}
+        </div>
+      </body>
+    </html>
   );
 }
