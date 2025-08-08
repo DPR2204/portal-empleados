@@ -15,18 +15,23 @@ export default function OrdenesPage() {
 
       // Usuario logueado
       const { data: usr } = await supabase.auth.getUser();
-      if (!usr.user) {
+      const user = usr?.user;
+      if (!user) {
         setErr('No hay sesión activa');
         setLoading(false);
         return;
       }
 
-      // Buscamos su registro en colaboradores
+      // Intenta enlazar colaborador<->usuario por email (no falla si ya está)
+      try { await supabase.rpc('link_me'); } catch (_) {}
+
+      // Buscamos su registro en colaboradores por auth_user_id (no por email)
       const { data: col, error: eCol } = await supabase
         .from('colaborador')
         .select('id')
-        .eq('email', usr.user.email)
+        .eq('auth_user_id', user.id)
         .single();
+
       if (eCol || !col) {
         setErr('Colaborador desconocido');
         setLoading(false);
@@ -36,7 +41,7 @@ export default function OrdenesPage() {
       // Traemos sus órdenes
       const { data, error } = await supabase
         .from('orden_pago')
-        .select('folio, periodo, frecuencia, neto, estado, verify_token')
+        .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
         .eq('colaborador_id', col.id)
         .order('created_at', { ascending: false });
 
@@ -68,7 +73,7 @@ export default function OrdenesPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => (
+            {rows.map((r) => (
               <tr key={r.folio} style={{ borderBottom: '1px solid #eee' }}>
                 <td>{r.periodo}</td>
                 <td>{r.folio}</td>
@@ -76,14 +81,10 @@ export default function OrdenesPage() {
                 <td>Q {r.neto}</td>
                 <td>{r.estado}</td>
                 <td>
-                  <Link href={/verify/${r.verify_token}} target="_blank">Verificar</Link> |{' '}
-                  <a href={/api/ordenes/pdf/${r.verify_token}} target="_blank">PDF</a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </main>
-  );
-}
+                  <Link
+                    href={`/verify/${r.verify_token}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Verificar
+                  </Link>{' '}|{' '}
