@@ -5,9 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabaseClient';
 
 export default function AdminOrdenesDeColab() {
-  const params = useParams();
+  const { id } = useParams(); // id público
+  const id_publico = decodeURIComponent(id);
   const router = useRouter();
-  const id_publico = decodeURIComponent(params.id);
 
   const [rows, setRows] = useState([]);
   const [col, setCol] = useState(null);
@@ -18,17 +18,20 @@ export default function AdminOrdenesDeColab() {
     (async () => {
       setErr(''); setLoading(true);
 
-      // 0) Validar que el usuario sea admin (tiene fila en app_admin)
-      const { data: { user }, error: eUser } = await supabase.auth.getUser();
+      // 0) Verifica sesión y rol ADMIN en profiles
+      const { data: udata, error: eUser } = await supabase.auth.getUser();
+      const user = udata?.user;
       if (eUser || !user) { setErr('No hay sesión activa'); setLoading(false); return; }
 
-      const { data: me } = await supabase
-        .from('app_admin')
+      const { data: me, error: eProf } = await supabase
+        .from('profiles')
         .select('user_id')
         .eq('user_id', user.id)
+        .eq('role', 'ADMIN')
         .maybeSingle();
 
-      if (!me) { setErr('No autorizado'); setLoading(false); return; }
+      if (eProf) { setErr(eProf.message); setLoading(false); return; }
+      if (!me)   { setErr('No autorizado'); setLoading(false); return; }
 
       // 1) Buscar colaborador por id_publico
       const { data: colaborador, error: eCol } = await supabase
@@ -41,7 +44,7 @@ export default function AdminOrdenesDeColab() {
       if (!colaborador) { setErr('Colaborador no encontrado'); setLoading(false); return; }
       setCol(colaborador);
 
-      // 2) Sus órdenes
+      // 2) Traer sus órdenes
       const { data, error } = await supabase
         .from('orden_pago')
         .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
@@ -65,7 +68,7 @@ export default function AdminOrdenesDeColab() {
       {rows.length === 0 ? (
         <p>Sin órdenes.</p>
       ) : (
-        <table style={{ borderCollapse:'collapse', width:'100%', maxWidth: 900 }}>
+        <table style={{ borderCollapse:'collapse', width:'100%', maxWidth: 900, marginTop: 12 }}>
           <thead>
             <tr>
               <th style={{ textAlign:'left' }}>Periodo</th>
