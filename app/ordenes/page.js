@@ -23,31 +23,23 @@ export default function OrdenesPage() {
         return;
       }
 
-      // 2) Intenta enlazar por email -> auth_user_id (RPC opcional)
+      // 2) Intenta enlazar por email -> auth_user_id (si ya existe, no pasa nada)
       try { await supabase.rpc('link_me'); } catch (_) {}
 
-      // 3) Busca colaborador por auth_user_id (no por email)
-      let col = null;
-      try {
-        // maybeSingle existe en supabase-js v2; si no, hacemos fallback
-        const res = await supabase
-          .from('colaborador')
-          .select('id')
-          .eq('auth_user_id', user.id)
-          .maybeSingle?.();
+      // 3) Obtén el colaborador por auth_user_id (sin single/maybeSingle)
+      const { data: colRows, error: colErr } = await supabase
+        .from('colaborador')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .limit(1);
 
-        if (res?.data) {
-          col = res.data;
-        } else {
-          const { data: d } = await supabase
-            .from('colaborador')
-            .select('id')
-            .eq('auth_user_id', user.id)
-            .limit(1);
-          col = (d && d[0]) || null;
-        }
-      } catch (_) {}
+      if (colErr) {
+        setErr(colErr.message || 'Error buscando colaborador');
+        setLoading(false);
+        return;
+      }
 
+      const col = (colRows && colRows[0]) || null;
       if (!col) {
         setErr('Colaborador desconocido');
         setLoading(false);
@@ -55,11 +47,13 @@ export default function OrdenesPage() {
       }
 
       // 4) Trae órdenes del colaborador
-      const selectCols = 'folio, periodo, frecuencia, neto, estado, verify_token, fecha_pago, created_at';
+      const selectCols =
+        'folio, periodo, frecuencia, neto, estado, verify_token, fecha_pago, created_at';
 
       async function fetchOrdersBy(columnName) {
-        // intentar ordenar por fecha_pago; si falla, por created_at
+        // intenta ordenar por fecha_pago; si no existe, usa created_at
         let q = supabase.from('orden_pago').select(selectCols).eq(columnName, col.id);
+
         let { data, error } = await q.order('fecha_pago', { ascending: false });
         if (error && String(error.message).toLowerCase().includes('fecha_pago')) {
           ({ data, error } = await supabase
@@ -71,14 +65,17 @@ export default function OrdenesPage() {
         return { data: data || [], error };
       }
 
-      // primero probamos con 'colaborador_id'; si no existe, 'colaborador'
+      // primero probamos con 'colaborador_id'; si la columna no existe, reintentamos con 'colaborador'
       let { data, error } = await fetchOrdersBy('colaborador_id');
       if (error && String(error.message).toLowerCase().includes('colaborador_id')) {
         ({ data, error } = await fetchOrdersBy('colaborador'));
       }
 
-      if (error) setErr(error.message);
-      else setRows(data);
+      if (error) {
+        setErr(error.message);
+      } else {
+        setRows(data);
+      }
 
       setLoading(false);
     })();
