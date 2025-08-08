@@ -9,11 +9,11 @@ export default function OrdenesPage() {
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       setErr('');
       setLoading(true);
 
-      // 1) Usuario actual
+      // 1) Verifica sesión
       const { data: { user }, error: eUser } = await supabase.auth.getUser();
       if (eUser || !user) {
         setErr('No hay sesión activa');
@@ -21,38 +21,17 @@ export default function OrdenesPage() {
         return;
       }
 
-      // 2) Buscar colaborador por auth_user_id (sin RPC)
-      const { data: col, error: colErr } = await supabase
-        .from('colaborador')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .maybeSingle();
-
-      if (colErr) {
-        setErr(colErr.message || 'Error buscando colaborador');
-        setLoading(false);
-        return;
-      }
-      if (!col) {
-        setErr('Colaborador no ligado a tu cuenta');
-        setLoading(false);
-        return;
-      }
-
-      // 3) Traer órdenes del colaborador
+      // 2) SOLO órdenes; sin RPC, sin leer colaborador, sin join
       const { data, error } = await supabase
         .from('orden_pago')
         .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
-        .eq('colaborador_id', col.id)
         .order('created_at', { ascending: false });
 
       if (error) setErr(error.message);
       else setRows(data ?? []);
 
       setLoading(false);
-    };
-
-    load();
+    })();
   }, []);
 
   if (loading) return <main><p>Cargando órdenes…</p></main>;
@@ -64,10 +43,10 @@ export default function OrdenesPage() {
       {rows.length === 0 ? (
         <p>No has generado aún ninguna orden.</p>
       ) : (
-        <table style={{ borderCollapse: 'collapse', width: '100%', maxWidth: 900 }}>
+        <table style={{ borderCollapse:'collapse', width:'100%', maxWidth:900 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Periodo</th>
+              <th style={{ textAlign:'left' }}>Periodo</th>
               <th>Folio</th>
               <th>Frecuencia</th>
               <th>Neto</th>
@@ -77,20 +56,16 @@ export default function OrdenesPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.folio} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={r.folio} style={{ borderBottom:'1px solid #eee' }}>
                 <td>{r.periodo}</td>
                 <td>{r.folio}</td>
                 <td>{r.frecuencia}</td>
                 <td>Q {Number(r.neto).toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
                 <td>{r.estado ?? '—'}</td>
                 <td>
-                  <Link href={`/verify/${r.verify_token}`} target="_blank" rel="noopener noreferrer">
-                    Verificar
-                  </Link>
+                  <Link href={`/verify/${r.verify_token}`} target="_blank" rel="noopener noreferrer">Verificar</Link>
                   {' | '}
-                  <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank" rel="noopener noreferrer">
-                    PDF
-                  </a>
+                  <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank" rel="noopener noreferrer">PDF</a>
                 </td>
               </tr>
             ))}
