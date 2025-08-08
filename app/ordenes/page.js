@@ -21,38 +21,33 @@ export default function OrdenesPage() {
         return;
       }
 
-      // Enlaza colaborador<->usuario por email si hiciera falta (no rompe si no existe)
+      // Enlaza por email -> auth_user_id si hiciera falta (no falla si ya existe)
       try { await supabase.rpc('link_me'); } catch {}
 
-      // Colaborador por auth_user_id
-      const { data: colRows, error: colErr } = await supabase
-        .from('colaborador')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .limit(1);
-
-      if (colErr) {
-        setErr(colErr.message || 'Error buscando colaborador');
-        setLoading(false);
-        return;
-      }
-
-      const col = (colRows && colRows[0]) || null;
-      if (!col) {
-        setErr('Colaborador desconocido');
-        setLoading(false);
-        return;
-      }
-
-      // Órdenes
-      const { data, error } = await supabase
+      // ----- Consulta por JOIN usando auth_user_id (intento 1: FK = colaborador_id) -----
+      let res = await supabase
         .from('orden_pago')
-        .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
-        .eq('colaborador_id', col.id)
+        .select(`
+          folio, periodo, frecuencia, neto, estado, verify_token, created_at,
+          colaborador:colaborador_id ( auth_user_id )
+        `)
+        .eq('colaborador.auth_user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) setErr(error.message);
-      else setRows(data || []);
+      // Si tu FK se llama 'colaborador' (sin _id), reintenta así:
+      if (res.error && String(res.error.message).toLowerCase().includes('colaborador_id')) {
+        res = await supabase
+          .from('orden_pago')
+          .select(`
+            folio, periodo, frecuencia, neto, estado, verify_token, created_at,
+            colaborador ( auth_user_id )
+          `)
+          .eq('colaborador.auth_user_id', user.id)
+          .order('created_at', { ascending: false });
+      }
+
+      if (res.error) setErr(res.error.message);
+      else setRows(res.data ?? []);
 
       setLoading(false);
     };
@@ -68,10 +63,10 @@ export default function OrdenesPage() {
       {rows.length === 0 ? (
         <p>No has generado aún ninguna orden.</p>
       ) : (
-        <table style={{ borderCollapse:'collapse', width:'100%', maxWidth:800 }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', maxWidth: 900 }}>
           <thead>
             <tr>
-              <th style={{ textAlign:'left' }}>Periodo</th>
+              <th style={{ textAlign: 'left' }}>Periodo</th>
               <th>Folio</th>
               <th>Frecuencia</th>
               <th>Neto</th>
@@ -81,15 +76,14 @@ export default function OrdenesPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.folio} style={{ borderBottom:'1px solid #eee' }}>
+              <tr key={r.folio} style={{ borderBottom: '1px solid #eee' }}>
                 <td>{r.periodo}</td>
                 <td>{r.folio}</td>
                 <td>{r.frecuencia}</td>
-                <td>Q {r.neto}</td>
-                <td>{r.estado}</td>
+                <td>Q {Number(r.neto).toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                <td>{r.estado ?? '—'}</td>
                 <td>
-                  <Link href={`/verify/${r.verify_token}`} target="_blank" rel="noopener noreferrer">Verificar</Link>
-                  {' | '}
+                  <Link href={`/verify/${r.verify_token}`} target="_blank" rel="noopener noreferrer">Verificar</Link>{' | '}
                   <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank" rel="noopener noreferrer">PDF</a>
                 </td>
               </tr>
