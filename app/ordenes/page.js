@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '../lib/supabaseClient'; // ruta relativa desde /app/ordenes
+import { supabase } from '../lib/supabaseClient'; // ruta RELATIVA
 
 export default function OrdenesPage() {
   const [rows, setRows] = useState([]);
@@ -14,17 +14,18 @@ export default function OrdenesPage() {
       setLoading(true);
 
       // 1) Usuario actual
-      const { data: { user }, error: eUser } = await supabase.auth.getUser();
+      const { data: userData, error: eUser } = await supabase.auth.getUser();
+      const user = userData?.user;
       if (eUser || !user) {
         setErr('No hay sesión activa');
         setLoading(false);
         return;
       }
 
-      // 2) Enlaza por email -> auth_user_id en caso de que falte (no rompe si ya existe)
+      // 2) (opcional) enlaza por email si faltó; no hace nada si ya existe
       try { await supabase.rpc('link_me'); } catch {}
 
-      // 3) Obtén el colaborador por auth_user_id (RLS ya lo permite)
+      // 3) Busca colaborador POR auth_user_id (no por email)
       const { data: colRows, error: colErr } = await supabase
         .from('colaborador')
         .select('id')
@@ -44,7 +45,7 @@ export default function OrdenesPage() {
         return;
       }
 
-      // 4) Trae las órdenes de ese colaborador
+      // 4) Trae sus órdenes
       const { data, error } = await supabase
         .from('orden_pago')
         .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
@@ -53,7 +54,6 @@ export default function OrdenesPage() {
 
       if (error) setErr(error.message);
       else setRows(data ?? []);
-
       setLoading(false);
     };
 
@@ -89,7 +89,8 @@ export default function OrdenesPage() {
                 <td>Q {Number(r.neto).toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
                 <td>{r.estado ?? '—'}</td>
                 <td>
-                  <Link href={`/verify/${r.verify_token}`} target="_blank" rel="noopener noreferrer">Verificar</Link>{' | '}
+                  <Link href={`/verify/${r.verify_token}`} target="_blank" rel="noopener noreferrer">Verificar</Link>
+                  {' | '}
                   <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank" rel="noopener noreferrer">PDF</a>
                 </td>
               </tr>
