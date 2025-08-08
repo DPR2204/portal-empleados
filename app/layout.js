@@ -1,5 +1,5 @@
 // app/layout.js  (Server Component)
-+ import ClientBootstrap from './components/ClientBootstrap';
+import ClientBootstrap from './components/ClientBootstrap';
 
 export const metadata = {
   title: 'Portal de Empleados',
