@@ -9,36 +9,42 @@ export default function OrdenesPage() {
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    async function load() {
+    const load = async () => {
       setErr('');
       setLoading(true);
 
-      // Usuario logueado
-      const { data: usr } = await supabase.auth.getUser();
-      const user = usr?.user;
-      if (!user) {
+      // Usuario
+      const { data: { user }, error: eUser } = await supabase.auth.getUser();
+      if (eUser || !user) {
         setErr('No hay sesión activa');
         setLoading(false);
         return;
       }
 
-      // Intenta enlazar colaborador<->usuario por email (no falla si ya está)
-      try { await supabase.rpc('link_me'); } catch (_) {}
+      // Enlaza colaborador<->usuario por email si hiciera falta (no rompe si no existe)
+      try { await supabase.rpc('link_me'); } catch {}
 
-      // Buscamos su registro en colaboradores por auth_user_id (no por email)
-      const { data: col, error: eCol } = await supabase
+      // Colaborador por auth_user_id
+      const { data: colRows, error: colErr } = await supabase
         .from('colaborador')
         .select('id')
         .eq('auth_user_id', user.id)
-        .single();
+        .limit(1);
 
-      if (eCol || !col) {
+      if (colErr) {
+        setErr(colErr.message || 'Error buscando colaborador');
+        setLoading(false);
+        return;
+      }
+
+      const col = (colRows && colRows[0]) || null;
+      if (!col) {
         setErr('Colaborador desconocido');
         setLoading(false);
         return;
       }
 
-      // Traemos sus órdenes
+      // Órdenes
       const { data, error } = await supabase
         .from('orden_pago')
         .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
@@ -47,8 +53,9 @@ export default function OrdenesPage() {
 
       if (error) setErr(error.message);
       else setRows(data || []);
+
       setLoading(false);
-    }
+    };
     load();
   }, []);
 
@@ -61,10 +68,10 @@ export default function OrdenesPage() {
       {rows.length === 0 ? (
         <p>No has generado aún ninguna orden.</p>
       ) : (
-        <table style={{ borderCollapse: 'collapse', width: '100%', maxWidth: 800 }}>
+        <table style={{ borderCollapse:'collapse', width:'100%', maxWidth:800 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Periodo</th>
+              <th style={{ textAlign:'left' }}>Periodo</th>
               <th>Folio</th>
               <th>Frecuencia</th>
               <th>Neto</th>
@@ -74,17 +81,22 @@ export default function OrdenesPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.folio} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={r.folio} style={{ borderBottom:'1px solid #eee' }}>
                 <td>{r.periodo}</td>
                 <td>{r.folio}</td>
                 <td>{r.frecuencia}</td>
                 <td>Q {r.neto}</td>
                 <td>{r.estado}</td>
                 <td>
-                  <Link
-                    href={`/verify/${r.verify_token}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Verificar
-                  </Link>{' '}|{' '}
+                  <Link href={`/verify/${r.verify_token}`} target="_blank" rel="noopener noreferrer">Verificar</Link>
+                  {' | '}
+                  <a href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank" rel="noopener noreferrer">PDF</a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </main>
+  );
+}
