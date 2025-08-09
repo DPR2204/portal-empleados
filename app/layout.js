@@ -20,6 +20,7 @@ export default function RootLayout({ children }) {
               <Link href="/ordenes/nueva">Nueva Orden</Link>
               <Link href="/colaboradores/nuevo">Nuevo Colaborador</Link>
               <Link href="/verify">Verificar Folio</Link>
+              <Link href="/comprobantes/nuevo">Nuevo Comprobante</a>
               <Link href="/admin">Admin</Link>
             </nav>
           </div>
