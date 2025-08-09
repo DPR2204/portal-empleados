@@ -1,46 +1,47 @@
-/* Reset mínimo */
+/* ===== Reset mínimo ===== */
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body { margin: 0; color: var(--text); background: var(--bg); }
 
-/* Tokens “airbnb-ish” (modo claro) */
+/* ===== Tokens (light + rojo) ===== */
 :root{
   --bg:#ffffff;
-  --text:#222222;
-  --muted:#6b7280;
+  --text:#1f2937;             /* slate-800 */
+  --muted:#6b7280;            /* slate-500 */
   --surface:#ffffff;
-  --border:#eaeaea;
+  --border:#e5e7eb;           /* slate-200 */
   --shadow: 0 8px 24px rgba(0,0,0,.06);
-  --accent:#ff385c;        /* toque Airbnb */
-  --accent-600:#e11d48;
+
+  --accent:#ff0000;           /* rojo primario */
+  --accent-600:#cc0000;       /* hover/active */
 }
 
-/* Layout */
+/* Enlaces con acento */
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-600); text-decoration: underline; }
+
+/* ===== Layout ===== */
 .shell { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr; }
 .container { max-width: 1000px; margin: 0 auto; padding: 24px 20px 40px; }
 
-/* Topbar + nav pill */
+/* Topbar + nav pills */
 .topbar{
   position: sticky; top:0; z-index:10;
-  background: rgba(255,255,255,.8); backdrop-filter: saturate(180%) blur(12px);
+  background: rgba(255,255,255,.9);
+  backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr; gap: 8px; padding: 8px 20px;
 }
-.brand{ font-weight: 700; padding: 14px 20px; }
-.topbar{ display: grid; grid-template-columns: 1fr; }
-@media (min-width: 720px){
-  .topbar{ grid-template-columns: 1fr auto; align-items: center; padding: 8px 20px; }
-  .brand{ padding: 8px 0; }
-}
-
-.nav{ display:flex; gap:8px; flex-wrap:wrap; padding: 8px 20px 14px; }
+.brand{ font-weight: 700; }
+.nav{ display:flex; gap:8px; flex-wrap:wrap; }
 .nav a{
-  text-decoration:none; color: var(--text);
+  color: var(--text); text-decoration:none;
   border:1px solid var(--border); background:#fff;
   padding:8px 12px; border-radius:999px; font-size:14px;
 }
-.nav a:hover{ border-color:#dcdcdc; box-shadow: var(--shadow); }
+.nav a:hover{ border-color: var(--accent); box-shadow: var(--shadow); }
 
-/* Tarjetas y bloques */
+/* ===== Cards / bloques ===== */
 .card{
   background: var(--surface);
   border:1px solid var(--border);
@@ -52,14 +53,17 @@ body { margin: 0; color: var(--text); background: var(--bg); }
 .h2{ margin:0 0 6px; font-size:20px; font-weight:600; }
 .muted{ color: var(--muted); }
 
-/* Controles */
+/* ===== Controles ===== */
 .input,.select{
   width:100%;
   background:#fff; color:var(--text);
   border:1px solid var(--border); border-radius:12px;
   padding:10px 12px; outline: none;
 }
-.input:focus,.select:focus{ border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,56,92,.15); }
+.input:focus,.select:focus{
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255,0,0,.15);
+}
 .form-row{ display:flex; gap:10px; flex-wrap:wrap; }
 .form-row > *{ flex:1 1 240px; }
 
@@ -72,7 +76,7 @@ body { margin: 0; color: var(--text); background: var(--bg); }
 .btn.primary{ background: var(--accent); color:#fff; border-color: transparent; font-weight:600; }
 .btn.primary:hover{ background: var(--accent-600); }
 
-/* Tablas */
+/* ===== Tablas ===== */
 .table-wrap{ overflow:auto; border:1px solid var(--border); border-radius:14px; background:#fff; box-shadow: var(--shadow); }
 .table{ width:100%; border-collapse:collapse; background:#fff; }
 .table th,.table td{ padding:14px 12px; border-bottom:1px solid var(--border); text-align:left; }
@@ -84,7 +88,7 @@ body { margin: 0; color: var(--text); background: var(--bg); }
 .badge.ok{ border-color:#c7f3dc; background:#f2fff8; color:#167c47; }
 .badge.warn{ border-color:#ffd2d2; background:#fff6f6; color:#b91c1c; }
 
-/* Utilidades */
+/* Utils */
 .stack-8{ display:grid; gap:8px; }
 .stack-12{ display:grid; gap:12px; }
 .actions{ display:flex; gap:10px; flex-wrap:wrap; }
