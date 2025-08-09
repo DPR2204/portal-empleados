@@ -262,3 +262,44 @@ input:focus, select:focus, textarea:focus{
   .grid-2{ grid-template-columns: 1fr; }
   .site-title{ font-size: 24px; }
 }
+:root{
+  --brand: #ff0000;      /* rojo de acento */
+  --ink: #111827;
+  --line: #e5e7eb;
+  --bg: #ffffff;
+}
+
+body { color: var(--ink); background: var(--bg); }
+
+.container { max-width: 1120px; margin: 0 auto; padding: 24px; }
+
+.site-header { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--line); z-index: 20; }
+.header-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+.logo { font-weight: 800; font-size: 28px; letter-spacing: .2px; }
+
+/* ---- NAV bonito con “pastillas” ---- */
+.nav { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.nav a {
+  display: inline-block;
+  text-decoration: none;
+  color: var(--ink);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  transition: border-color .15s, color .15s, background .15s, transform .06s;
+}
+.nav a:hover { border-color: var(--brand); color: var(--brand); background: #fff5f5; }
+.nav a:active { transform: translateY(1px); }
+
+/* Opcional: marcar activo si lo usas */
+.nav a[aria-current="page"] {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: #fff5f5;
+}
+
+/* Espaciado de secciones principales */
+.section { padding: 24px 0; }
+
