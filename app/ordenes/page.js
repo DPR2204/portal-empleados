@@ -1,7 +1,8 @@
+// app/ordenes/page.js
 'use client';
+
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 
 export default function OrdenesPage() {
   const [rows, setRows] = useState([]);
@@ -9,10 +10,11 @@ export default function OrdenesPage() {
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    const load = async () => {
+    const run = async () => {
       setErr('');
       setLoading(true);
 
+      // 1) usuario actual
       const { data: userData, error: eUser } = await supabase.auth.getUser();
       const user = userData?.user;
       if (eUser || !user) {
@@ -21,10 +23,10 @@ export default function OrdenesPage() {
         return;
       }
 
-      // (opcional) intenta enlazar por email si faltó alguna vez
+      // 2) (opcional) asegurar link por email si faltó
       try { await supabase.rpc('link_me'); } catch {}
 
-      // Gracias a las RLS, esto ya devuelve SOLO tus órdenes
+      // 3) buscar órdenes del colaborador (RLS ya filtra por auth.uid())
       const { data, error } = await supabase
         .from('orden_pago')
         .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
@@ -32,18 +34,19 @@ export default function OrdenesPage() {
 
       if (error) setErr(error.message);
       else setRows(data ?? []);
+
       setLoading(false);
     };
-    load();
+    run();
   }, []);
 
-  if (loading) return <main className="section"><div className="card">Cargando…</div></main>;
-  if (err) return <main className="section"><div className="card"><p style={{color:'#b91c1c'}}>Error: {err}</p></div></main>;
+  if (loading) return <div className="section"><p className="muted">Cargando…</p></div>;
+  if (err) return <div className="section"><p style={{color:'#b91c1c'}}>Error: {err}</p></div>;
 
   return (
-    <main className="section">
+    <div className="section">
       <div className="card stack-12">
-        <h2 className="h2">Mis Órdenes</h2>
+        <h2>Mis Órdenes</h2>
 
         {rows.length === 0 ? (
           <p className="muted">Aún no tienes órdenes emitidas.</p>
@@ -57,7 +60,7 @@ export default function OrdenesPage() {
                   <th>Frecuencia</th>
                   <th>Neto</th>
                   <th>Estado</th>
-                  <th style={{ width: 160 }}>Acciones</th>
+                  <th style={{width:160}}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -66,9 +69,13 @@ export default function OrdenesPage() {
                     <td>{r.periodo}</td>
                     <td>{r.folio}</td>
                     <td>{r.frecuencia}</td>
-                    <td>{new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(r.neto)}</td>
                     <td>
-                      <span className={`badge ${r.estado === 'EMITIDO' ? 'ok' : 'warn'}`}>{r.estado}</span>
+                      {new Intl.NumberFormat('es-GT',{ style:'currency', currency:'GTQ'}).format(r.neto ?? 0)}
+                    </td>
+                    <td>
+                      <span className={`badge ${r.estado === 'EMITIDO' ? 'ok' : 'warn'}`}>
+                        {r.estado}
+                      </span>
                     </td>
                     <td>
                       <div className="actions">
@@ -83,6 +90,6 @@ export default function OrdenesPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }
