@@ -1,142 +1,126 @@
-// app/admin/page.js
 'use client';
-
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
 
+const ESTADOS = ['EMITIDO', 'PAGADO', 'ANULADO'];
+
 export default function AdminPage() {
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [me, setMe] = useState(null);
+  const [q, setQ] = useState('');
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(null); // verify_token que se está guardando
   const [err, setErr] = useState('');
 
-  // filtros
-  const [colabId, setColabId] = useState('');
-  const [email, setEmail] = useState('');
-  const [rows, setRows] = useState([]);
-
+  // Carga mi rol
   useEffect(() => {
-    const init = async () => {
-      setErr('');
-      setLoading(true);
-
-      // 1) sesión
-      const { data: udata, error: eUser } = await supabase.auth.getUser();
-      const user = udata?.user;
-      if (eUser || !user) {
-        setErr('No hay sesión activa');
-        setLoading(false);
-        return;
-      }
-
-      // 2) role desde profiles
-      const { data: prof, error: eProf } = await supabase
+    const load = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return setErr('No hay sesión');
+      const { data: prof } = await supabase
         .from('profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (eProf) {
-        setErr(eProf.message);
-        setLoading(false);
-        return;
-      }
-
-      setIsAdmin(prof?.role === 'ADMIN');
-      setLoading(false);
+        .select('role, display_name, email')
+        .eq('user_id', userData.user.id)
+        .single();
+      setMe(prof);
     };
-
-    init();
+    load();
   }, []);
 
   const buscar = async () => {
     setErr('');
     setRows([]);
-
+    setLoading(true);
     try {
-      let targetId = colabId?.trim();
-
-      // Si ponen email, resolvemos el colaborador_id por email
-      if (!targetId && email.trim()) {
-        const { data: col, error: eCol } = await supabase
-          .from('colaborador')
-          .select('id')
-          .ilike('email', email.trim())
-          .maybeSingle();
-
-        if (eCol) throw eCol;
-        if (!col) {
-          setErr('No existe colaborador con ese email.');
-          return;
-        }
-        targetId = col.id;
-        setColabId(col.id);
-      }
-
-      if (!targetId) {
-        setErr('Ingresa un colaborador_id o un email.');
-        return;
-      }
-
-      const { data, error } = await supabase
+      // Busca por folio (ILIKE) o verify_token exacto (uuid)
+      const byToken = /^[0-9a-f-]{36}$/i.test(q.trim());
+      let query = supabase
         .from('orden_pago')
-        .select('folio, periodo, frecuencia, neto, estado, verify_token, created_at')
-        .eq('colaborador_id', targetId)
-        .order('created_at', { ascending: false });
+        .select('id, folio, periodo, frecuencia, neto, estado, verify_token, created_at')
+        .order('created_at', { ascending: false })
+        .limit(50);
 
+      if (byToken) {
+        query = query.eq('verify_token', q.trim());
+      } else if (q.trim()) {
+        query = query.ilike('folio', `%${q.trim()}%`);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setRows(data ?? []);
     } catch (e) {
-      setErr(e.message);
+      setErr(e.message ?? String(e));
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <div className="section"><p className="muted">Cargando…</p></div>;
-  if (!isAdmin) {
+  const actualizarEstado = async (row, nuevoEstado) => {
+    setErr('');
+    setSaving(row.verify_token);
+    try {
+      const { error } = await supabase
+        .from('orden_pago')
+        .update({ estado: nuevoEstado })
+        .eq('verify_token', row.verify_token);
+      if (error) throw error;
+
+      // Refresca en memoria
+      setRows(prev =>
+        prev.map(r =>
+          r.verify_token === row.verify_token ? { ...r, estado: nuevoEstado } : r
+        )
+      );
+    } catch (e) {
+      setErr(e.message ?? String(e));
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  if (!me) {
+    return <main className="section"><p>Cargando…</p></main>;
+  }
+  if (me.role !== 'ADMIN') {
     return (
-      <div className="section">
+      <main className="section">
         <div className="card">
-          <h2>Admin</h2>
-          <p className="muted">No tienes permisos de administrador.</p>
+          <h2 className="h2">No autorizado</h2>
+          <p>Tu rol es <b>{me.role}</b>. Esta vista es solo para <b>ADMIN</b>.</p>
+          <Link className="btn" href="/">Volver</Link>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="section">
-      <div className="card stack-12">
-        <h2>Admin — Historial por colaborador</h2>
+    <main className="section">
+      <div className="card stack-16">
+        <h2 className="h2">Administración de Órdenes</h2>
 
-        <div className="stack-12" style={{maxWidth: 640}}>
-          <label>
-            <div className="muted" style={{marginBottom:6}}>colaborador_id</div>
+        <div className="stack-8">
+          <div className="admin-search">
             <input
-              placeholder="Ej. 52faadb3-8f33-4f34-8111-62a98b644d51"
-              value={colabId}
-              onChange={(e) => setColabId(e.target.value)}
+              className="input"
+              type="text"
+              placeholder="Buscar por folio (texto) o verify_token (UUID)…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && buscar()}
             />
-          </label>
-
-          <div className="muted" style={{textAlign:'center'}}>— o —</div>
-
-          <label>
-            <div className="muted" style={{marginBottom:6}}>Email del colaborador</div>
-            <input
-              placeholder="persona@empresa.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-
-          <div className="actions">
-            <button className="btn btn-primary" onClick={buscar}>Buscar</button>
-            <button className="btn" onClick={()=>{ setRows([]); setErr(''); }}>Limpiar</button>
+            <button className="btn" onClick={buscar} disabled={loading}>
+              {loading ? 'Buscando…' : 'Buscar'}
+            </button>
           </div>
+
+          {err && <p className="error">{err}</p>}
         </div>
 
-        {err && <p style={{color:'#b91c1c'}}>{err}</p>}
-
-        {rows.length > 0 && (
+        {rows.length === 0 ? (
+          <p className="muted">Sin resultados.</p>
+        ) : (
           <div className="table-wrap">
             <table className="table">
               <thead>
@@ -146,23 +130,36 @@ export default function AdminPage() {
                   <th>Frecuencia</th>
                   <th>Neto</th>
                   <th>Estado</th>
-                  <th style={{width:160}}>Acciones</th>
+                  <th style={{ width: 220 }}>Actualizar</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.folio}>
+                  <tr key={r.verify_token}>
                     <td>{r.periodo}</td>
-                    <td>{r.folio}</td>
+                    <td className="mono">{r.folio}</td>
                     <td>{r.frecuencia}</td>
-                    <td>{new Intl.NumberFormat('es-GT',{style:'currency', currency:'GTQ'}).format(r.neto ?? 0)}</td>
+                    <td>{new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(r.neto)}</td>
                     <td>
-                      <span className={`badge ${r.estado === 'EMITIDO' ? 'ok' : 'warn'}`}>{r.estado}</span>
+                      <span className={`badge ${r.estado === 'EMITIDO' ? 'ok' : r.estado === 'PAGADO' ? 'paid' : 'warn'}`}>
+                        {r.estado}
+                      </span>
                     </td>
                     <td>
                       <div className="actions">
-                        <a className="btn" href={`/verify/${r.verify_token}`} target="_blank" rel="noreferrer">Verificar</a>
-                        <a className="btn" href={`/api/ordenes/pdf/${r.verify_token}`} target="_blank" rel="noreferrer">PDF</a>
+                        <select
+                          className="input"
+                          defaultValue={r.estado}
+                          onChange={(e) => actualizarEstado(r, e.target.value)}
+                          disabled={saving === r.verify_token}
+                        >
+                          {ESTADOS.map((e) => (
+                            <option key={e} value={e}>{e}</option>
+                          ))}
+                        </select>
+                        <a className="btn ghost" href={`/verify/${r.verify_token}`} target="_blank" rel="noreferrer">
+                          Verificar
+                        </a>
                       </div>
                     </td>
                   </tr>
@@ -171,11 +168,7 @@ export default function AdminPage() {
             </table>
           </div>
         )}
-
-        {rows.length === 0 && !err && (
-          <p className="muted">Sin resultados. Ingresa un <strong>colaborador_id</strong> o un <strong>email</strong> y pulsa “Buscar”.</p>
-        )}
       </div>
-    </div>
+    </main>
   );
 }
