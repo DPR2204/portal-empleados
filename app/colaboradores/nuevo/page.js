@@ -72,110 +72,79 @@ export default function NuevoColaborador() {
   };
 
   return (
-    <main>
-      <h2>Nuevo colaborador</h2>
+<main>
+  <div className="form-card">
+    <h2 className="form-title">Nuevo colaborador</h2>
 
-      <form
-        onSubmit={guardar}
-        style={{ display: 'grid', gap: 12, maxWidth: 480 }}
-      >
-        <input
-          name="nombres"
-          placeholder="Nombres"
-          value={campos.nombres}
-          onChange={cambia}
-          required
-        />
-        <input
-          name="apellidos"
-          placeholder="Apellidos"
-          value={campos.apellidos}
-          onChange={cambia}
-          required
-        />
-        <input
-          name="dpi"
-          placeholder="DPI"
-          value={campos.dpi}
-          onChange={cambia}
-          required
-        />
-        <input
-          name="email"
-          type="email"
-          placeholder="Correo"
-          value={campos.email}
-          onChange={cambia}
-          required
-        />
-        <input
-          name="telefono"
-          placeholder="Teléfono"
-          value={campos.telefono}
-          onChange={cambia}
-        />
-        <input
-          name="puesto"
-          placeholder="Puesto"
-          value={campos.puesto}
-          onChange={cambia}
-        />
-        <input
-          name="sucursal"
-          placeholder="Sucursal"
-          value={campos.sucursal}
-          onChange={cambia}
-        />
-        <input
-          name="sueldo_base"
-          type="number"
-          step="0.01"
-          placeholder="Sueldo base (mensual)"
-          value={campos.sueldo_base}
-          onChange={cambia}
-          required
-        />
-        <select
-          name="frecuencia_default"
-          value={campos.frecuencia_default}
-          onChange={cambia}
-        >
-          <option value="MENSUAL">Mensual</option>
-          <option value="QUINCENAL">Quincenal</option>
-          <option value="DIAS">Por días</option>
-        </select>
-        <input
-          name="tarifa_diaria"
-          type="number"
-          step="0.01"
-          placeholder="Tarifa diaria"
-          value={campos.tarifa_diaria}
-          onChange={cambia}
-        />
-        <input
-          name="fecha_ingreso"
-          type="date"
-          placeholder="Fecha de ingreso"
-          value={campos.fecha_ingreso}
-          onChange={cambia}
-        />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input
-            name="estado"
-            type="checkbox"
-            checked={campos.estado}
-            onChange={cambia}
-          />
-          Activo
-        </label>
+    <form onSubmit={handleSubmit}>
+      {/* Grid de 2 columnas en desktop */}
+      <div className="form-grid cols-2">
+        <div className="field">
+          <label>Nombres</label>
+          <input name="nombres" placeholder="Nombres" required />
+        </div>
+        <div className="field">
+          <label>Apellidos</label>
+          <input name="apellidos" placeholder="Apellidos" required />
+        </div>
 
-        <button type="submit" style={{ padding: '8px 16px' }}>
-          Guardar
-        </button>
-      </form>
+        <div className="field">
+          <label>DPI</label>
+          <input name="dpi" placeholder="DPI" />
+        </div>
+        <div className="field">
+          <label>Correo</label>
+          <input type="email" name="email" placeholder="correo@dominio.com" required />
+        </div>
 
-      {err && <p style={{ color: 'red' }}>{err}</p>}
-      {msg && <p style={{ color: 'green' }}>{msg}</p>}
-    </main>
-  );
-}
+        <div className="field">
+          <label>Teléfono</label>
+          <input type="tel" name="telefono" placeholder="502..." />
+        </div>
+        <div className="field">
+          <label>Puesto</label>
+          <input name="puesto" placeholder="Puesto" />
+        </div>
+
+        <div className="field">
+          <label>Sucursal</label>
+          <input name="sucursal" placeholder="Sucursal" />
+        </div>
+        <div className="field">
+          <label>Sueldo base (mensual)</label>
+          <input type="number" step="0.01" name="sueldo_base" placeholder="0.00" />
+        </div>
+
+        <div className="field">
+          <label>Frecuencia</label>
+          <select name="frecuencia" defaultValue="MENSUAL">
+            <option value="MENSUAL">Mensual</option>
+            <option value="QUINCENAL">Quincenal</option>
+            <option value="SEMANAL">Semanal</option>
+            <option value="DIARIA">Diaria</option>
+          </select>
+        </div>
+        <div className="field">
+          <label>Tarifa diaria</label>
+          <input type="number" step="0.01" name="tarifa_diaria" placeholder="0.00" />
+        </div>
+
+        <div className="field">
+          <label>Fecha de ingreso</label>
+          <input type="date" name="fecha_ingreso" />
+        </div>
+        <div className="field" style={{display:'flex', alignItems:'end'}}>
+          <label className="switch">
+            <input type="checkbox" name="activo" defaultChecked />
+            <span>Activo</span>
+          </label>
+        </div>
+      </div>
+
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</main>
+
