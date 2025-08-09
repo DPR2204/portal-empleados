@@ -1,247 +1,264 @@
-/* ========== Design tokens (colores base) ========== */
+/* =========
+   Diseño base – Portal Empleados
+   ========= */
+
+/* Paleta y escalas */
 :root{
-  --bg: #ffffff;
-  --text: #111111;
-  --muted: #6b7280;
-  --border: #e9ecef;
-  --brand: #ff0000;
-  --ring: #ff0000;
+  --brand: #ff0000;             /* rojo acento */
+  --ink: #0f172a;               /* texto principal */
+  --ink-2: #334155;             /* texto secundario */
+  --muted: #6b7280;             /* texto tenue */
+  --bg: #ffffff;                /* fondo app */
+  --surface: #ffffff;           /* tarjetas/superficies */
+  --border: #e5e7eb;            /* bordes suaves */
+  --shadow: 0 10px 15px rgba(0,0,0,.05), 0 4px 6px rgba(0,0,0,.03);
+
+  --radius: 14px;
+  --radius-sm: 10px;
 }
 
-/* ========== Reset suave / base ========== */
-*{ box-sizing:border-box }
-html,body{ height:100% }
+/* Reset mínimo */
+*{ box-sizing: border-box; }
+html, body { height: 100%; }
 body{
-  margin:0;
-  color:var(--text);
-  background:var(--bg);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  line-height:1.4;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Contenedor global */
-.container{
-  max-width: 1100px;
-  padding: 24px;
-  margin: 0 auto;
+img{ max-width: 100%; display: block; }
+a{
+  color: var(--brand);
+  text-decoration: none;
 }
+a:hover{ text-decoration: underline; }
 
 /* Tipografía */
-h1,h2,h3{ margin:0 0 12px }
-h1{ font-size:28px; font-weight:800; }
-h2{ font-size:22px; font-weight:700; }
-p{ margin:0 0 8px; }
-.muted{ color:var(--muted); }
+h1,h2,h3{
+  margin: 0 0 12px;
+  line-height: 1.2;
+}
+h1{ font-size: 28px; font-weight: 800; }
+h2{ font-size: 22px; font-weight: 700; }
+h3{ font-size: 18px; font-weight: 700; }
+.muted{ color: var(--muted); }
 
-/* ========== Header / Nav (pills) ========== */
-header{
-  position: sticky; top:0; z-index:10;
-  background:var(--bg);
-  border-bottom:1px solid var(--border);
-}
-header .container{
-  display:flex; align-items:center; gap:20px; flex-wrap:wrap;
-  padding-top:16px; padding-bottom:16px;
-}
-header h1{ flex:1 1 auto; }
-
-header nav{
-  display:flex; gap:10px; flex-wrap:wrap;
-}
-header nav a{
-  display:inline-flex; align-items:center; height:34px;
-  padding:0 14px; border-radius:9999px;
-  border:1px solid var(--border); background:#fff;
-  color:var(--text); text-decoration:none; font-weight:600;
-}
-header nav a:hover{
-  border-color:var(--ring); box-shadow:0 0 0 3px #ff000022;
-}
-
-/* ========== Secciones y tarjetas ========== */
-.section{ padding: 24px 0; }
-.card{
-  background:#fff;
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:20px;
-  box-shadow:0 4px 12px rgba(0,0,0,.04);
-}
-.stack-12{ display:grid; gap:12px }
-
-/* ========== Botones ========== */
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:8px; height:36px; padding:0 14px;
-  border-radius:10px; border:1px solid var(--border);
-  background:#fff; color:var(--text);
-  text-decoration:none; font-weight:600; cursor:pointer;
-}
-.btn:hover{ border-color:var(--ring); box-shadow:0 0 0 3px #ff000022; }
-
-.btn-primary{
-  border-color:var(--brand); background:var(--brand); color:#fff;
-}
-.btn-primary:hover{ filter:brightness(.95); }
-
-/* Grupo de acciones en tabla */
-.actions{ display:flex; gap:8px; }
-
-/* ========== Tabla ========== */
-.table-wrap{ overflow:auto; border:1px solid var(--border); border-radius:12px; }
-table{ width:100%; border-collapse:separate; border-spacing:0; background:#fff; }
-thead th{
-  text-align:left; font-weight:700; font-size:14px;
-  background:#fafafa; border-bottom:1px solid var(--border);
-  padding:12px 14px;
-}
-tbody td{
-  padding:12px 14px; border-bottom:1px solid var(--border);
-  font-size:14px;
-}
-tbody tr:hover{ background:#fafafa; }
-
-/* ========== Badges de estado ========== */
-.badge{
-  display:inline-flex; align-items:center; height:26px;
-  padding:0 10px; border-radius:9999px; font-weight:700; font-size:12px;
-}
-.badge.ok{ color:#166534; background:#dcfce7; }      /* verde */
-.badge.warn{ color:#92400e; background:#fef3c7; }    /* ámbar */
-
-/* ========== Formularios (inputs/labels) ========== */
-form{ display:grid; gap:12px; }
-
-input, select, textarea{
-  width:100%; padding:10px 12px;
-  border:1px solid var(--border); border-radius:10px;
-  background:#fff; outline:none;
-  transition:border-color .15s, box-shadow .15s;
-  font-size:14px;
-}
-input:focus, select:focus, textarea:focus{
-  border-color:var(--ring); box-shadow:0 0 0 3px #ff000022;
-}
-
-/* ========== Footer ========== */
+/* Layout */
+.container{ max-width: 1120px; margin: 0 auto; padding: 24px; }
+.section{ padding: 24px; }
 .footer{
-  border-top:1px solid var(--border);
-  margin-top:24px;
-  color:var(--muted);
-}
-/* ---------- FORM UI (light) ---------- */
-:root{
-  --brand:#ff0000;
-  --ink:#0f172a;           /* gris muy oscuro */
-  --muted:#6b7280;         /* gris texto secundario */
-  --line:#e5e7eb;          /* borde suave */
-  --surface:#ffffff;       /* tarjeta blanca */
-  --shadow:0 8px 24px rgba(0,0,0,.06);
-}
-
-/* Envoltorio genérico para páginas con formulario */
-main .form-card{
-  max-width: 760px;
-  margin: 16px auto 56px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
+  margin-top: 40px;
   padding: 24px;
-}
-
-/* Título */
-.form-title{
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0 0 16px;
-}
-
-/* Grid responsive: una columna en móvil, dos en desktop */
-.form-grid{
-  display: grid;
-  gap: 14px;
-}
-@media (min-width: 720px){
-  .form-grid.cols-2{
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-/* Campo */
-.field label{
-  display: block;
-  font-size: 13px;
+  border-top: 1px solid var(--border);
   color: var(--muted);
-  margin: 0 0 6px;
-}
-.field input,
-.field select,
-.field textarea{
-  width: 100%;
-  height: 44px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-  font: inherit;
-  outline: none;
-  transition: box-shadow .15s, border-color .15s;
-}
-.field textarea{
-  height: auto;
-  min-height: 96px;
-  resize: vertical;
+  font-size: 12px;
 }
 
-.field input::placeholder{ color: #9ca3af; }
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus{
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(255,0,0,.12);
+/* Header + Nav en “píldoras” */
+.header{
+  padding: 24px 0 8px;
+  border-bottom: 1px solid var(--border);
 }
-
-/* Fila de acciones */
-.form-actions{
+.site-title{
+  font-size: 28px;
+  font-weight: 800;
+}
+.main-nav{
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  justify-content: flex-end;
-  margin-top: 18px;
+  padding: 12px 0 0;
 }
+.main-nav a{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  line-height: 1;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.main-nav a:hover{
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.main-nav a.active{
+  background: rgba(255,0,0,.06);
+  border-color: var(--brand);
+  color: var(--brand);
+  font-weight: 600;
+}
+
+/* Tarjetas / contenedores */
+.card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+/* Utilidades verticales */
+.stack-08 > * + * { margin-top: 8px; }
+.stack-12 > * + * { margin-top: 12px; }
+.stack-16 > * + * { margin-top: 16px; }
 
 /* Botones */
 .btn{
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  height: 42px;
-  padding: 0 16px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
   background: #fff;
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: transform .02s ease-in, filter .15s;
+  text-decoration: none;
+  transition: border-color .15s, color .15s, background .15s, transform .02s;
 }
+.btn:hover{ border-color: var(--brand); color: var(--brand); }
 .btn:active{ transform: translateY(1px); }
 
-.btn-primary{
+.btn.primary{
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
 }
-.btn-primary:hover{ filter: brightness(.95); }
+.btn.primary:hover{ filter: brightness(.94); }
+.btn.ghost{
+  background: transparent;
+  border-color: transparent;
+  color: var(--brand);
+}
+.actions{ display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Switch simple para "Activo" (cuando uses checkbox) */
+/* Badges */
+.badge{
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+.badge.ok{
+  background: #ecfdf5;
+  border-color: #10b98133;
+  color: #065f46;
+}
+.badge.warn{
+  background: #fef2f2;
+  border-color: #ef444433;
+  color: #991b1b;
+}
+
+/* Tablas */
+.table-wrap{
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+.table{
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+.table th,
+.table td{
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+.table th{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fafafa;
+  font-size: 12px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.table tbody tr:nth-child(even) td{ background: #fbfbfb; }
+.table tbody tr:hover td{ background: #fff7f7; }
+
+/* Formularios */
+.form{ display: grid; gap: 16px; max-width: 640px; }
+.field{ display: grid; gap: 6px; }
+label{ font-size: 12px; color: var(--muted); }
+
+input, select, textarea{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  outline: none;
+  transition: box-shadow .15s, border-color .15s;
+}
+input:focus, select:focus, textarea:focus{
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(255,0,0,.08);
+}
+
+/* Grid 2 columnas para forma en desktop */
+.grid-2{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Switch simple (para “Activo”) con checkbox */
 .switch{
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 14px; color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink);
 }
 .switch input[type="checkbox"]{
-  width: 38px; height: 22px; appearance: none; outline: none;
-  background: #e5e7eb; border-radius: 999px; position: relative;
-  transi
+  width: 38px;
+  height: 22px;
+  appearance: none;
+  outline: none;
+  background: #e5e7eb;
+  border-radius: 999px;
+  position: relative;
+  transition: background .15s;
+}
+.switch input[type="checkbox"]::after{
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+  transition: transform .15s;
+}
+.switch input[type="checkbox"]:checked{ background: var(--brand); }
+.switch input[type="checkbox"]:checked::after{ transform: translateX(16px); }
+
+/* Responsivo */
+@media (max-width: 640px){
+  .container{ padding: 16px; }
+  .section{ padding: 16px; }
+  .grid-2{ grid-template-columns: 1fr; }
+  .site-title{ font-size: 24px; }
+}
