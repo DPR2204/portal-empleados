@@ -1,32 +1,33 @@
-// app/layout.js  (SERVER component — sin "use client")
-import './globals.css';
-
+// app/layout.js
 export const metadata = {
   title: 'Portal de Empleados',
-  description: 'MVP Portal Empleados - Órdenes de Pago',
+  description: 'MVP Portal Empleados — Órdenes de Pago',
 };
+
+import './globals.css';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body>
-        <header className="topbar">
-          <div className="container topbar__inner">
-            <h1 className="logo">Portal de Empleados</h1>
-            <nav className="nav">
+        <header>
+          <div className="container">
+            <h1>Portal de Empleados</h1>
+            <nav>
               <a href="/">Inicio</a>
               <a href="/ordenes">Mis Órdenes</a>
               <a href="/ordenes/nueva">Nueva Orden</a>
               <a href="/colaboradores/nuevo">Nuevo Colaborador</a>
               <a href="/verify">Verificar Folio</a>
-              <a href="/dashboard">Admin</a>
+              <a href="/admin">Admin</a>
             </nav>
           </div>
         </header>
 
-        <div className="container">{children}</div>
+        <main className="container">{children}</main>
+
         <footer className="footer">
-          © {new Date().getFullYear()} Portal Empleados
+          <div className="container">© {new Date().getFullYear()} Portal Empleados</div>
         </footer>
       </body>
     </html>
