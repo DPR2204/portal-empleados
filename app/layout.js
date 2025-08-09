@@ -1,32 +1,33 @@
-// app/layout.js
+// app/layout.js  (SERVER component — sin "use client")
 import './globals.css';
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Portal de Empleados',
-  description: 'Órdenes de pago',
+  description: 'MVP Portal Empleados - Órdenes de Pago',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <body className={inter.className}>
-        <div className="shell">
-          <header className="topbar">
-            <div className="brand">Portal de Empleados</div>
+      <body>
+        <header className="topbar">
+          <div className="container topbar__inner">
+            <h1 className="logo">Portal de Empleados</h1>
             <nav className="nav">
               <a href="/">Inicio</a>
               <a href="/ordenes">Mis Órdenes</a>
               <a href="/ordenes/nueva">Nueva Orden</a>
               <a href="/colaboradores/nuevo">Nuevo Colaborador</a>
               <a href="/verify">Verificar Folio</a>
-              <a href="/admin/ordenes">Admin</a>
+              <a href="/dashboard">Admin</a>
             </nav>
-          </header>
-          <main className="container">{children}</main>
-        </div>
+          </div>
+        </header>
+
+        <div className="container">{children}</div>
+        <footer className="footer">
+          © {new Date().getFullYear()} Portal Empleados
+        </footer>
       </body>
     </html>
   );
