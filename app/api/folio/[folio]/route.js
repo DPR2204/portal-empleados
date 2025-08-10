@@ -1,45 +1,28 @@
-// app/api/folio/[folio]/route.js
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
 
 export async function GET(_req, { params }) {
-  const folio = decodeURIComponent(params.folio || '').trim().toUpperCase();
-  if (!folio) {
-    return NextResponse.json({ error: 'Folio requerido' }, { status: 400 });
-  }
+  const folio = decodeURIComponent(params.folio);
 
-  const tryOrden = async () => {
-    const { data, error } = await supabaseAdmin
-      .from('orden_pago')
-      .select('verify_token')
-      .eq('folio', folio)
-      .limit(1);
-    if (error) throw error;
-    return data?.[0]?.verify_token || null;
-  };
+  // 1) Orden de pago
+  const { data: op, error: e1 } = await supabaseAdmin
+    .from('orden_pago')
+    .select('verify_token')
+    .eq('folio', folio)
+    .limit(1);
 
-  const tryComprobante = async () => {
-    const { data, error } = await supabaseAdmin
-      .from('comprobante')
-      .select('verify_token')
-      .eq('folio', folio)
-      .limit(1);
-    if (error) throw error;
-    return data?.[0]?.verify_token || null;
-  };
+  if (e1) return NextResponse.json({ error: e1.message }, { status: 500 });
+  if (op && op[0]) return NextResponse.json({ verify_token: op[0].verify_token });
 
-  // Heurística rápida por prefijo (opcional) y fallback a probar ambas
-  let token = null;
-  if (folio.startsWith('CO-')) token = await tryOrden();
-  else if (folio.startsWith('CP-')) token = await tryComprobante();
-  else {
-    token = await tryOrden();
-    if (!token) token = await tryComprobante();
-  }
+  // 2) Comprobante
+  const { data: cp, error: e2 } = await supabaseAdmin
+    .from('comprobante')
+    .select('verify_token')
+    .eq('folio', folio)
+    .limit(1);
 
-  if (!token) {
-    return NextResponse.json({ error: 'Folio no encontrado' }, { status: 404 });
-  }
+  if (e2) return NextResponse.json({ error: e2.message }, { status: 500 });
+  if (cp && cp[0]) return NextResponse.json({ verify_token: cp[0].verify_token });
 
-  return NextResponse.json({ verify_token: token });
+  return NextResponse.json({ error: 'Folio no encontrado' }, { status: 404 });
 }
