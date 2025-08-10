@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -11,30 +10,20 @@ export default function VerifyIndexPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     const f = folio.trim().toUpperCase();
-    if (!f) {
-      setError('Por favor ingresa un folio.');
-      return;
-    }
+    if (!f) return setError('Por favor ingresa un folio.');
 
-    try {
-      const res = await fetch(`/api/folio/${encodeURIComponent(f)}`);
-      if (!res.ok) {
-        setError('Folio no encontrado');
-        return;
-      }
-      const { verify_token } = await res.json();
-      router.push(`/verify/${verify_token}`);
-    } catch {
-      setError('Error al verificar el folio');
-    }
+    const res = await fetch(`/api/folio/${encodeURIComponent(f)}`);
+    if (!res.ok) return setError('Folio no encontrado');
+
+    const { verify_token } = await res.json();
+    router.push(`/verify/${verify_token}`);
   };
 
   return (
     <main style={{ maxWidth: 480, margin: '0 auto' }}>
       <h2>Verificar Orden por Folio</h2>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <form onSubmit={handleSubmit} style={{ display:'flex', gap:8, marginBottom:16 }}>
         <input
           type="text"
           placeholder="Ej. CO-83AEE-2026-02-M-7023 o CP-BON-2025-08-0006"
