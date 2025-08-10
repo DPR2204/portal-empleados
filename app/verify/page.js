@@ -1,4 +1,3 @@
-// app/verify/page.js
 'use client';
 
 import { useState } from 'react';
@@ -12,19 +11,24 @@ export default function VerifyIndexPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
     const f = folio.trim().toUpperCase();
     if (!f) {
       setError('Por favor ingresa un folio.');
       return;
     }
 
-    const res = await fetch(`/api/ordenes/folio/${encodeURIComponent(f)}`);
-    if (!res.ok) {
-      setError('Folio no encontrado');
-      return;
+    try {
+      const res = await fetch(`/api/folio/${encodeURIComponent(f)}`);
+      if (!res.ok) {
+        setError('Folio no encontrado');
+        return;
+      }
+      const { verify_token } = await res.json();
+      router.push(`/verify/${verify_token}`);
+    } catch {
+      setError('Error al verificar el folio');
     }
-    const { verify_token } = await res.json();
-    router.push(`/verify/${verify_token}`);
   };
 
   return (
@@ -33,7 +37,7 @@ export default function VerifyIndexPage() {
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <input
           type="text"
-          placeholder="Ej. CO-83AEE-2026-02-M-7023"
+          placeholder="Ej. CO-83AEE-2026-02-M-7023 o CP-BON-2025-08-0006"
           value={folio}
           onChange={e => setFolio(e.target.value)}
           style={{ flex: 1 }}
